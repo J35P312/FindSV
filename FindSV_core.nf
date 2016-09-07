@@ -41,6 +41,7 @@ if(!vcf_file.exists()){
 
     process TIDDIT {
         publishDir "${params.working_dir}"
+        
         cpus 1
         
         input:
@@ -58,8 +59,9 @@ if(!vcf_file.exists()){
 
     process CNVnator {
         publishDir "${params.working_dir}"
+        
         cpus 1
-    
+
         input:
         file bam_file
     
@@ -68,18 +70,20 @@ if(!vcf_file.exists()){
         script:
         """
         
-        ${CNVnator_exec_file} -root cnvnator.root -chrom chr1 -tree ${bam_file} -unique
-        ${CNVnator_exec_file} -root cnvnator.root -chrom chr1 -his ${params.CNVnator_bin_size} -d ${CNVnator_reference_dir}
-        ${CNVnator_exec_file} -root cnvnator.root -chrom chr1 -stat ${params.CNVnator_bin_size} >> cnvnator.log
-        ${CNVnator_exec_file} -root cnvnator.root -chrom chr1 -partition ${params.CNVnator_bin_size}
-        ${CNVnator_exec_file} -root cnvnator.root -chrom chr1 -call ${params.CNVnator_bin_size} > ${bam_file.baseName}_CNVnator.out
+        ${CNVnator_exec_file} -root cnvnator.root -tree ${bam_file}
+        ${CNVnator_exec_file} -root cnvnator.root -his ${params.CNVnator_bin_size} -d ${CNVnator_reference_dir}
+        ${CNVnator_exec_file} -root cnvnator.root -stat ${params.CNVnator_bin_size} >> cnvnator.log
+        ${CNVnator_exec_file} -root cnvnator.root -partition ${params.CNVnator_bin_size}
+        ${CNVnator_exec_file} -root cnvnator.root -call ${params.CNVnator_bin_size} > ${bam_file.baseName}_CNVnator.out
         ${CNVnator2vcf} ${bam_file.baseName}_CNVnator.out >  ${bam_file.baseName}_CNVnator.vcf
         rm cnvnator.root
         """
     }
 
     process combine {
-
+        publishDir "${params.working_dir}"
+        
+        cpus 1
 
         input:
         file bam_file
@@ -88,7 +92,7 @@ if(!vcf_file.exists()){
         file TIDDIT_intra_vcf
 
         output: 
-            file "${bam_file.baseName}_FindSV.vcf" into combined_vcf
+            file "${bam_file.baseName}_CombinedCalls.vcf" into combined_vcf
 	    
 	    
 	    script:
@@ -96,7 +100,7 @@ if(!vcf_file.exists()){
         """
         python ${SVDB_exec_file} --merge --no_var --pass_only --no_intra --overlap 0.7 --bnd_distance 2500 --vcf ${TIDDIT_inter_vcf} ${TIDDIT_intra_vcf} ${CNVnator_vcf} > merged.unsorted.vcf
         
-        python ${contig_sort_exec_file} --vcf merged.unsorted.vcf --bam ${bam_file} > ${bam_file.baseName}_FindSV.vcf
+        python ${contig_sort_exec_file} --vcf merged.unsorted.vcf --bam ${bam_file} > ${bam_file.baseName}_CombinedCalls.vcf
         rm merged.unsorted.vcf
         """
         
@@ -110,46 +114,48 @@ if(!vcf_file.exists()){
 process annotate{
     publishDir "${params.working_dir}"
     
+    cpus 1
+    
     input:
         file vcf_file
         file bam_file
         
     output:
-        file "${vcf_file}" into final_FindSV_vcf
+        file "${bam_file.baseName}_FindSV.vcf" into final_FindSV_vcf
         
     script:
     
     """
     ${VEP_exec_file} --cache --force_overwrite --poly b -i ${vcf_file}  -o ${vcf_file}.tmp --buffer_size 5 --port 3337 --vcf --per_gene --format vcf -q
-    mv ${vcf_file}.tmp ${vcf_file}
-    python ${clear_vep_exec} ${vcf_file} > ${vcf_file}.tmp
-    mv ${vcf_file}.tmp ${vcf_file}
+    mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
+    python ${clear_vep_exec} ${bam_file.baseName}_FindSV.vcf > ${vcf_file}.tmp
+    mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     
-    python ${cleanVCF_exec} --vcf ${vcf_file} > ${vcf_file}.tmp
-    mv ${vcf_file}.tmp ${vcf_file}
+    python ${cleanVCF_exec} --vcf ${bam_file.baseName}_FindSV.vcf > ${vcf_file}.tmp
+    mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     
-    python ${SVDB_exec_file} --merge --overlap 1 --vcf --vcf ${vcf_file} > ${vcf_file}.tmp
-    mv ${vcf_file}.tmp ${vcf_file}
-    python ${contig_sort_exec_file} --vcf ${vcf_file} --bam ${bam_file} > ${vcf_file}.tmp
-    mv ${vcf_file}.tmp ${vcf_file}
+    python ${SVDB_exec_file} --merge --overlap 1 --vcf --vcf ${bam_file.baseName}_FindSV.vcf > ${vcf_file}.tmp
+    mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
+    python ${contig_sort_exec_file} --vcf ${bam_file.baseName}_FindSV.vcf --bam ${bam_file} > ${vcf_file}.tmp
+    mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     
     
     if [ "" != ${gene_keys_dir} ] && [ "" != ${the_annotator_exec} ]
     then
-        python ${the_annotator_exec} --folder ${gene_keys_dir} --vcf ${vcf_file} > ${vcf_file}.tmp
-        mv ${vcf_file}.tmp ${vcf_file}
+        python ${the_annotator_exec} --folder ${gene_keys_dir} --vcf ${bam_file.baseName}_FindSV.vcf > ${vcf_file}.tmp
+        mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
     
     if [ "" != ${SVDB_file} ]
     then
-        python ${SVDB_exec_file} --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${vcf_file} --db ${SVDB_file} > ${vcf_file}.tmp
-        mv ${vcf_file}.tmp ${vcf_file}
+        python ${SVDB_exec_file} --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --db ${SVDB_file} > ${vcf_file}.tmp
+        mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
 
     if [ "" != {genmod_rank_model_file} ]
     then
-        genmod score -c ${genmod_rank_model_file} ${vcf_file}  > ${vcf_file}.tmp
-        mv ${vcf_file}.tmp ${vcf_file}
+        genmod score -c ${genmod_rank_model_file} ${bam_file.baseName}_FindSV.vcf  > ${vcf_file}.tmp
+        mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
 
     """
