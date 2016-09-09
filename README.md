@@ -7,9 +7,8 @@ FindSV needs to be setup using the setup.py script, this script will generate a 
 Run
 
     First initiate the FindSV environment:
-        source ./FindSV_environment.sh
-    note: the name of the environment script is set by the user, hence it may not be FindSV_environment.sh
-
+        source ./FindSV_env.sh
+        
     To analyse one bam file and put the output in the output_folder type:
 
         python FindSV.py --bam file.bam --output output_folder --config config_file

@@ -107,7 +107,7 @@ if selection != "":
 if thisroot != "":
     FindSV_env += "source {}".format(thisroot)
 
-print "done! type ./FindSV_env.sh before running FindSV to activate the FindSV environment"
+print "done! type source ./FindSV_env.sh before running FindSV to activate the FindSV environment"
 
 f= open("FindSV_env.sh", "w")
 f.write(FindSV_env)
