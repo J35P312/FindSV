@@ -97,6 +97,7 @@ selection=raw_input()
 if selection == "UPPMAX" or selection ==  "uppmax":
     selection = "bioinfo-tools CNVnator samtools vep"
 
+print "creating conda environment"
 FindSV_env="source activate FindSV_env\n"
 command=["{} {} {}".format(os.path.join(programDirectory,"internal_scripts/CONDA/create_conda_env.sh"), os.path.join(programDirectory,"internal_scripts/CONDA/"), programDirectory)]
 tmp=subprocess.check_output(command,shell = True)
