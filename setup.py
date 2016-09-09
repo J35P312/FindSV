@@ -115,4 +115,4 @@ f.close()
 
 print "installing nextflow"
 os.system("curl -fsSL get.nextflow.io | bash")
-    
+os.system("chmod +x FindSV_env.sh")
