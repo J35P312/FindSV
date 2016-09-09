@@ -5,6 +5,7 @@ similar variants are merged, and the variants are annotated using VEP, frequency
 FindSV needs to be setup using the setup.py script, this script will generate a config file aswell as a bash script for setting up the environment.
 
 Run
+
     First initiate the FindSV environment:
         source ./FindSV_environment.sh
     note: the name of the environment script is set by the user, hence it may not be FindSV_environment.sh
