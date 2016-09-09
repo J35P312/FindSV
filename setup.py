@@ -103,12 +103,15 @@ tmp=subprocess.check_output(command,shell = True)
     
 if selection != "":
     FindSV_env += "module load {}\n".format(selection)
+if thisroot != "":
+    FindSV_env += "source {}".format(thisroot)
 
-FindSV_env += "source {}".format(thisroot)
 print "done! type ./FindSV_env.sh before running FindSV to activate the FindSV environment"
 
 f= open("FindSV_env.sh", "w")
 f.write(FindSV_env)
 f.close()
 
+print "installing nextflow"
+os.system("curl -fsSL get.nextflow.io | bash")
     

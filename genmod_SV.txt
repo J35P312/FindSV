@@ -1,0 +1,218 @@
+[Version]
+  version = 1
+  name = rank_model_publication
+
+[Categories]
+ [[Consequence]]
+   category_aggregation = sum
+
+[MostSevereConsequence]
+  field = INFO
+  data_type = string
+  category = Consequence
+  record_rule = max
+  separators = '&',
+  info_key = CSQ
+  csq_key = Consequence
+  description = The most severe consequence for this variant
+
+  [[transcript_ablation]]
+    score = 5
+    priority = 1
+    string = 'transcript_ablation'
+
+  [[initiator_codon_variant]]
+    score = 5
+    priority = 1
+    string = 'initiator_codon_variant'
+
+  [[frameshift_variant]]
+    score = 5
+    priority = 1
+    string = 'frameshift_variant'
+
+  [[stop_gained]]
+    score = 5
+    priority = 1
+    string = 'stop_gained'
+
+  [[start_lost]]
+    score = 5
+    priority = 1
+    string = 'start_lost'
+
+  [[stop_lost]]
+    score = 5
+    priority = 1
+    string = 'stop_lost'
+
+  [[splice_acceptor_variant]]
+    score = 5
+    priority = 1
+    string = 'splice_acceptor_variant'
+
+  [[splice_donor_variant]]
+    score = 5
+    priority = 1
+    string = 'splice_donor_variant'
+
+  [[inframe_deletion]]
+    score = 5
+    priority = 1
+    string = 'inframe_deletion'
+
+  [[transcript_amplification]]
+    score = 5
+    priority = 1
+    string = 'transcript_amplification'
+
+  [[splice_region_variant]]
+    score = 5
+    priority = 1
+    string = 'splice_region_variant'
+
+  [[missense_variant]]
+    score = 5
+    priority = 1
+    string = 'missense_variant'
+
+  [[protein_altering_variant]]
+    score = 5
+    priority = 1
+    string = 'protein_altering_variant'
+
+  [[inframe_insertion]]
+    score = 5
+    priority = 1
+    string = 'inframe_insertion'
+
+  [[incomplete_terminal_codon_variant]]
+    score = 5
+    priority = 1
+    string = 'incomplete_terminal_codon_variant'
+
+  [[synonymous_variant]]
+    score = 5
+    priority = 1
+    string = 'synonymous_variant'
+
+  [[non_coding_transcript_exon_variant]]
+    score = 5
+    priority = 1
+    string = 'non_coding_transcript_exon_variant'
+
+  [[mature_mirna_variant]]
+    score = 5
+    priority = 1
+    string = 'mature_mirna_variant'
+
+  [[non_coding_transcript_variant]]
+    score = 5
+    priority = 1
+    string = 'non_coding_transcript_variant'
+
+  [[regulatory_region_variant]]
+    score = 5
+    priority = 1
+    string = 'regulatory_region_variant'
+
+  [[upstream_gene_variant]]
+    score = 0
+    priority = 0
+    string = 'upstream_gene_variant'
+
+  [[regulatory_region_amplification]]
+    score = 5
+    priority = 1
+    string = 'regulatory_region_amplification'
+
+  [[tfbs_amplification]]
+    score = 5
+    priority = 1
+    string = 'tfbs_amplification'
+
+  [[5_prime_utr_variant]]
+    score = 5
+    priority = 1
+    string = '5_prime_utr_variant'
+
+  [[intron_variant]]
+    score = 5
+    priority = 1
+    string = 'intron_variant'
+
+  [[3_prime_utr_variant]]
+    score = 5
+    priority = 1
+    string = '3_prime_utr_variant'
+
+  [[feature_truncation]]
+    score = 5
+    priority = 1
+    string = 'feature_truncation'
+
+  [[TF_binding_site_variant]]
+    score = 5
+    priority = 1
+    string = 'TF_binding_site_variant'
+
+  [[stop_retained_variant]]
+    score = 5
+    priority = 1
+    string = 'stop_retained_variant'
+
+  [[feature_elongation]]
+    score = 5
+    priority = 1
+    string = 'feature_elongation'
+
+  [[regulatory_region_ablation]]
+    score = 5
+    priority = 1
+    string = 'regulatory_region_ablation'
+
+  [[tfbs_ablation]]
+    score = 5
+    priority = 1
+    string = 'tfbs_ablation'
+
+  [[coding_sequence_variant]]
+    score = 5
+    priority = 1
+    string = 'coding_sequence_variant'
+
+  [[downstream_gene_variant]]
+    score = 0
+    priority = 0
+    string = 'downstream_gene_variant'
+
+  [[NMD_transcript_variant]]
+    score = 5
+    priority = 1
+    string = 'NMD_transcript_variant'
+
+  [[intergenic_variant]]
+    score = -5
+    priority = 0
+    string = 'intergenic_variant'
+
+  [[not_reported]]
+    score = 0
+    
+    
+[OMIM]
+  field = INFO
+  data_type = string
+  category = Consequence
+  record_rule = max
+  separators = '|'
+  info_key = Omim
+  description = reported Omim gene
+  
+  [[Found]]
+    score = 5
+    priority = 0
+    string = 'Found'
+    
+  [[not_reported]]
+    score = 0

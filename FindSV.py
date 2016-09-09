@@ -79,8 +79,8 @@ def read_yaml(working_dir):
 parser = argparse.ArgumentParser("FindSV core module",add_help=False)
 parser.add_argument('--bam', type=str,help="analyse the bam file using FindSV")
 parser.add_argument("--folder", type=str,help="analyse every bam file within a folder using FindSV")
-parser.add_argument('--output', type=str,default=None,help="the output is stored in this folder") 
-parser.add_argument("--config",type=str, default=None,help="the config file(default=FindSV.config")
+parser.add_argument('--output', type=str,default=None,help="the output is stored in this folder, default output folder is fetched from the config file") 
+parser.add_argument("--config",type=str,required=True, default=None,help="the config file")
 parser.add_argument("--restart",action="store_true",help="restart module: perform the selected restart on the specified folder")
 args, unknown = parser.parse_known_args()
 
@@ -90,7 +90,7 @@ if args.bam:
     parser = argparse.ArgumentParser("FindSV core module",add_help=False)
     parser.add_argument('--bam', type=str,help="analyse the bam file using FindSV")
     parser.add_argument('--output', type=str,default=None,help="the output is stored in this folder")
-    parser.add_argument("--config",type=str, default=None,help="the location of the config file(default= the same folder as the FindSV-core script")
+    parser.add_argument("--config",type=str, required=True,default=None,help="the location of the config file(default= the same folder as the FindSV-core script")
     args = parser.parse_args()
     
     if not args.output:
@@ -109,7 +109,7 @@ elif args.folder:
     parser = argparse.ArgumentParser("FindSV core module",add_help=False)
     parser.add_argument("--folder", type=str,help="analyse every bam file within a folder using FindSV")
     parser.add_argument('--output', type=str,default=None,help="the output is stored in this folder")
-    parser.add_argument("--config",type=str, default=None,help="the location of the config file(default= the same folder as the FindSV-core script")
+    parser.add_argument("--config", required=True, type=str, default=None,help="the config file")
     args = parser.parse_args()
     
     if not args.output:
@@ -139,7 +139,7 @@ elif args.restart:
     parser.add_argument("--full",action="store_true",help="restarts the analysis from scratch")
     parser.add_argument("--restart",type=str,nargs="*",help="restart module: perform the selected restart on the specified folder(default output if none is chosen)")
     parser.add_argument('--output', type=str,default=None,help="the output is stored in this folder")
-    parser.add_argument("--config",type=str, default=None,help="the location of the config file(default= the same folder as the FindSV-core script")
+    parser.add_argument("--config",type=str, default=None,help="the config file")
     args = parser.parse_args()
 
     if not args.output:
