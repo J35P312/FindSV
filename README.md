@@ -1,10 +1,12 @@
 FindSV
 ===========
 FindSV is a structural variation pipeline written in nextflow and python. FindSV performs variant calling using TIDDIT and CNVnator.
-similar variants are merged, and the variants are annotated using VEP, frequency database, genmod, and custom annotation using the annotator script
+similar variants are merged, and the variants are annotated using VEP, frequency database, genmod, and custom annotation using the annotator script.
+
 FindSV needs to be setup using the setup.py script, this script will generate a config file aswell as a bash script for setting up the environment.
 
 Run
+===
 
     First initiate the FindSV environment:
         source ./FindSV_env.sh
@@ -17,10 +19,9 @@ Run
 
         python FindSV.py --folder input_folder --output output_folder --config config_file
 
-or skip the --output flag to put the output in the directory given py the config file.
+	Optionally, the pipeline may be run using the FindSV_core.nf script directly:
+		./nextflow FindSV_core.nf --bam file.bam --working_dir output -c config.conf
 
-Optionally, the pipeline may be run using the FindSV_core.nf script
-    ./nextflow FindSV_core.nf --bam file.bam -c config.conf
 
 Installation
 ============
@@ -28,6 +29,7 @@ Dependencies:
     Conda
     cnvnator
     variant effect predictor
+    bwa
     
 After installing the dependencies, run the setup script:
     python setup.py
@@ -35,6 +37,7 @@ After installing the dependencies, run the setup script:
 this script will ask a couple on questions, such as cnvnator path and reference directory path. answer all these questions to finnish the setup.
 The cnvnator install scripts in the internal_scripts folder may be used to intall cnvnator.
 
+After running the setup script, two files will be generated, the config file, and the FindSV_env.sh script.
 
 Restart module
 ============
@@ -46,6 +49,8 @@ Config file
 =========
 The config file is generated using the setup.py script. Generate the file and read the comments within 
 this file for more information on the individual variables.
+
+The config file template is found in the folder config_template. This template could be turned into a config file through manual configuration.
 
 Gene_Keys
 ==========

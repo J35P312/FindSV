@@ -8,6 +8,10 @@ params.vcf="none"
 vcf_file=file(params.vcf)
 
 if(!bam_file.exists() && !vcf_file.exists()) exit 1, "Missing bam or vcf file. use either --bam to analyse a bam file, or --bam and--vcf to annotate a vcf file"
+bai_file=file("${params.bam}.bai")
+if(!bai_file.exists()){
+	bai_file=file("${bam_file}".replaceFirst(/.bam/,".bai"))
+}
 
 TIDDIT_exec_file = file( "${params.TIDDIT_path}" )
 if(!TIDDIT_exec_file.exists()) exit 1, "Error: Missing TIDDIT executable, set the TIDDIT_path parameter in the config file"
@@ -35,6 +39,11 @@ cleanVCF_exec=file("${params.cleanVCF_path}")
 
 the_annotator_exec=file("${params.the_annotator_path}")
 gene_keys_dir=file("${params.gene_keys_dir_path}")
+
+frequency_filter_exec= file("${params.frequency_filter_path}")
+
+assemblatron_exec= file("${params.FindSV_home}/TIDDIT/variant_assembly_filter/assemblatron.nf")
+assemblatron_conf_file = file("${params.FindSV_home}/TIDDIT/variant_assembly_filter/slurm.config")
 
 //perform variant calling if the input is a bam fle
 if(!vcf_file.exists()){
@@ -119,6 +128,8 @@ process annotate{
     input:
         file vcf_file
         file bam_file
+        file assemblatron_exec
+        file bai_file
         
     output:
         file "${bam_file.baseName}_FindSV.vcf" into final_FindSV_vcf
@@ -157,7 +168,13 @@ process annotate{
         genmod score -c ${genmod_rank_model_file} ${bam_file.baseName}_FindSV.vcf  > ${vcf_file}.tmp
         mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
+	
+	python ${frequency_filter_exec} ${bam_file.baseName}_FindSV.vcf ${params.SVDB_limit} > ${vcf_file}.tmp
+	mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
 
+	${params.FindSV_home}/nextflow ${assemblatron_exec} --genome ${params.reference_fasta} --vcf ${bam_file.baseName}_FindSV.vcf --bam ${bam_file} --working_dir assemblatron_output -c ${assemblatron_conf_file}
+    python ${cleanVCF_exec} --vcf assemblatron_output/assemblator.vcf > ${bam_file.baseName}_FindSV.vcf
+    
     """
 
 }

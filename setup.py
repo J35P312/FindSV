@@ -35,6 +35,10 @@ command=["{} {}".format(os.path.join(programDirectory,"internal_scripts/install_
 tmp=subprocess.check_output(command,shell = True)
 template=template.replace("{TIDDIT_path}", "\'{}\'".format(os.path.join(programDirectory,"TIDDIT/bin/TIDDIT")) )
 
+print "add the path to a bwa indexed reference file"
+selection=raw_input()
+template=template.replace("{REFERENCE_FASTA}", "\'{}\'".format(selection) )
+
 print "add cnvnator path, the path is set to cnvnator if left blank"
 selection=raw_input()
 if selection == "":
@@ -63,6 +67,8 @@ template=template.replace("{clear_vep_path}", "\'{}\'".format( os.path.join(prog
 template=template.replace("{cleanVCF_path}", "\'{}\'".format( os.path.join(programDirectory,"internal_scripts/cleanVCF.py") ) )
 template=template.replace("{the_annotator_path}", "\'{}\'".format( os.path.join(programDirectory,"internal_scripts/the_annotator.py") ) )
 template=template.replace("{gene_keys_dir_path}", "\'{}\'".format( os.path.join(programDirectory,"gene_keys") ) )
+template=template.replace("{frequency_filter_path}", "\'{}\'".format( os.path.join(programDirectory,"internal_scripts/frequency_filter.py") ) )
+template=template.replace("{FindSV_home_path}", "\'{}\'".format( os.path.join(programDirectory) ) )
 
 print "add the variant_effect_predictor.pl script path, the path is set to variant_effect_predictor.pl if left blank"
 print "remember to download the VEP cache file! more info is found on the VEP ENSMBLE website"
@@ -92,13 +98,13 @@ f.close()
 
 print "creating FindSV environment script"
 print "modules: print uppmax if you are using uppmax, print a line of each module to use, or leave empty to skip modules"
-print "example: bioinfo-tools samtools CNVnator vep"
+print "example: bioinfo-tools samtools CNVnator vep, to load the modules bioinfo-tools, sammtools, CNVnator and vep"
 selection=raw_input()
 if selection == "UPPMAX" or selection ==  "uppmax":
-    selection = "bioinfo-tools CNVnator samtools vep"
+    selection = "bioinfo-tools CNVnator samtools vep bwa abyss"
 
 print "creating conda environment"
-FindSV_env="source activate FindSV_env\n"
+FindSV_env+="source activate FindSV_env\n"
 command=["{} {} {}".format(os.path.join(programDirectory,"internal_scripts/CONDA/create_conda_env.sh"), os.path.join(programDirectory,"internal_scripts/CONDA/"), programDirectory)]
 tmp=subprocess.check_output(command,shell = True)
     
@@ -107,7 +113,7 @@ if selection != "":
 if thisroot != "":
     FindSV_env += "source {}".format(thisroot)
 
-print "done! type source ./FindSV_env.sh before running FindSV to activate the FindSV environment"
+print "done! type source ./FindSV_env.sh before running FindSV to activate the FindSV environment, FindSV must be on during teh entire analysis, hence you might need to run a screen session to avoid interuption"
 
 f= open("FindSV_env.sh", "w")
 f.write(FindSV_env)

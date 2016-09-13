@@ -5,6 +5,7 @@ import os
 import re
 import fnmatch
 import subprocess
+import tempfile
 
 def get_output_dir(config):
     working_dir = None
@@ -18,7 +19,7 @@ def get_output_dir(config):
 def retrieve_status(status,nextflow_output):
     for sample in nextflow_output:
         sample_id=sample.split("\n")[0].replace(".bam","").split("/")[-1]
-        if "Error executing process" in sample:
+        if "Error executing process" in sample or "Launching FindSV_core.nf\nERROR" in sample or not "Submitted process > TIDDIT" in sample:
             status[sample_id]["status"]="FAILED:CALLING"
             if "Submitted process > annotate" in sample:
                  status[sample_id]["status"]="FAILED:ANNOTATION"
@@ -36,8 +37,8 @@ def worker(bam_files,args,status):
         prefix=sample["bam"].split("/")[-1].replace(".bam","")
         status[prefix]={}
         status[prefix]["bam_file"]=sample["bam"]
-        f = os.tmpfile()
-        e = os.tmpfile()
+        f = tempfile.NamedTemporaryFile(prefix="{}_out".format(prefix))
+        e = tempfile.NamedTemporaryFile(prefix="{}_err".format(prefix))
         if sample["mode"] == "full":
             process=["./launch_core.sh",sample["bam"],args.config,args.output]
         elif sample["mode"] == "annotate":
@@ -47,7 +48,11 @@ def worker(bam_files,args,status):
             
     nextflow_output=[]
     for p, f ,e in processes:
-        p.wait()
+        try:
+        	print ("waiting for {} to finish... please hold".format(f.name)
+            p.wait()
+        except:
+            print "FAIL, unnable to contact:{}".format(f.name)
         f.seek(0)
         nextflow_output.append(f.read())
         f.close()

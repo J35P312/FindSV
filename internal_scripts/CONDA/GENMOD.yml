@@ -5,8 +5,8 @@ dependencies:
 - python=2.7.11=0
 - readline=6.2=2
 - setuptools=20.2.2=py27_0
-- sqlite=3.9.2=0
 - tk=8.5.18=0
+- sqlite=3.13.0=0
 - wheel=0.29.0=py27_0
 - zlib=1.2.8=0
 - ncurses=5.9=4
@@ -27,4 +27,5 @@ dependencies:
   - pytest==2.9.0
   - six==1.10.0
   - sortedcontainers==1.4.4
+  - pysam
 
