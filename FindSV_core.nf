@@ -163,18 +163,21 @@ process annotate{
         mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
 
-    if [ "" != {genmod_rank_model_file} ]
+    if [ "" != ${genmod_rank_model_file} ]
     then
         genmod score -c ${genmod_rank_model_file} ${bam_file.baseName}_FindSV.vcf  > ${vcf_file}.tmp
         mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
 	
-	python ${frequency_filter_exec} ${bam_file.baseName}_FindSV.vcf ${params.SVDB_limit} > ${vcf_file}.tmp
-	mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
+    python ${frequency_filter_exec} ${bam_file.baseName}_FindSV.vcf ${params.SVDB_limit} > ${vcf_file}.tmp
+    mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
 
+    if ["OFF" != ${params.assemblatron} ]
+    then 
 	${params.FindSV_home}/nextflow ${assemblatron_exec} --genome ${params.reference_fasta} --vcf ${bam_file.baseName}_FindSV.vcf --bam ${bam_file} --working_dir assemblatron_output -c ${assemblatron_conf_file}
-    python ${cleanVCF_exec} --vcf assemblatron_output/assemblator.vcf > ${bam_file.baseName}_FindSV.vcf
-    
+        python ${cleanVCF_exec} --vcf assemblatron_output/assemblator.vcf > ${bam_file.baseName}_FindSV.vcf
+    fi
+
     """
 
 }
