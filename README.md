@@ -19,10 +19,14 @@ Run
 
         python FindSV.py --folder input_folder --output output_folder --config config_file
 
-	Optionally, the pipeline may be run using the FindSV_core.nf script directly:
+Optionally, the pipeline may be run using the FindSV_core.nf script directly:
+	
+	The following command will analyse a bam file:
 		./nextflow FindSV_core.nf --bam file.bam --working_dir output -c config.conf
-
-
+	An entire folder containing bam files could be analysed using this command
+		./nextflow FindSV_core.nf --folder /the/bams/are/in/this/folder/ --working_dir output -c config.conf
+	
+		
 Installation
 ============
 Dependencies:
@@ -65,5 +69,4 @@ Frequency database
 
 Genmod
 ========
-
 
