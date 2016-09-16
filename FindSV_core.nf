@@ -1,17 +1,36 @@
 #!/usr/bin/env nextflow
 
-params.bam="none"
-bam_file = file(params.bam)
+if(params.folder){
+    print "analysing all bam files in ${params.folder}\n"
+    bam_files=Channel.fromPath("${params.folder}/*.bam")
+    bai_files=Channel.fromPath("${params.folder}/*.bam.bai")
+    if( bai_files.toList().length() == 0 ){
+        bai_files=Channel.fromPath("${params.folder}/*.bai")
+    }else{
+        bai_files=Channel.fromPath("${params.folder}/*.bam.bai")
+    }
 
+}else if(params.bam){
+    bam_files = file(params.bam)
 
-params.vcf="none"
-vcf_file=file(params.vcf)
-
-if(!bam_file.exists() && !vcf_file.exists()) exit 1, "Missing bam or vcf file. use either --bam to analyse a bam file, or --bam and--vcf to annotate a vcf file"
-bai_file=file("${params.bam}.bai")
-if(!bai_file.exists()){
-	bai_file=file("${bam_file}".replaceFirst(/.bam/,".bai"))
+    if(!bam_files.exists()) exit 1, "Missing bam, use either --bam to analyse a bam file, or --bam and--vcf to annotate a vcf file"
+    bai_files=file("${params.bam}.bai")
+    if(!bai_files.exists()){
+    	bai_files=file("${bam_files}".replaceFirst(/.bam/,".bai"))
+    }
+    
+    
+    bam_files = Channel.fromPath(params.bam)
+}else{
+    print "usage: nextflow FindSV_core.nf [--folder/--bam] --working_dir output_directory -c config_file\n"
+    print "--bam STR,	analyse a bam file, the bam files is asumed to be indexed\n"
+    print "--folder STR,	analyse all bam files in the given folder, the bam fils are assumed to be indexed\n"
+    print "-c STR,	the config file generated using the setup.py script\n"
+    print "--working_dir STR,	the output directory, here all the vcf files will end up\n"
+    print "--vcf STR,	if used together with bam: the vcf file is annotated using information from the bam file\n if used with folder: not yet supported"
+    exit 1
 }
+
 
 TIDDIT_exec_file = file( "${params.TIDDIT_path}" )
 if(!TIDDIT_exec_file.exists()) exit 1, "Error: Missing TIDDIT executable, set the TIDDIT_path parameter in the config file"
@@ -45,8 +64,18 @@ frequency_filter_exec= file("${params.frequency_filter_path}")
 assemblatron_exec= file("${params.FindSV_home}/TIDDIT/variant_assembly_filter/assemblatron.nf")
 assemblatron_conf_file = file("${params.FindSV_home}/TIDDIT/variant_assembly_filter/slurm.config")
 
+TIDDIT_bam=Channel.create()
+CNVnator_bam=Channel.create()
+combine_bam=Channel.create()
+annotation_bam=Channel.create()
+
+Channel
+       	.from bam_files
+        .separate( TIDDIT_bam, CNVnator_bam, combine_bam,annotation_bam) { a -> [a, a, a,a,a] }
+
+
 //perform variant calling if the input is a bam fle
-if(!vcf_file.exists()){
+if(!params.vcf){
 
     process TIDDIT {
         publishDir "${params.working_dir}"
@@ -54,11 +83,11 @@ if(!vcf_file.exists()){
         cpus 1
         
         input:
-        file bam_file
+        file bam_file from TIDDIT_bam
     
         output:
-        file "${bam_file.baseName}_FT_inter_chr_events.vcf" into TIDDIT_inter_vcf
-        file "${bam_file.baseName}_FT_intra_chr_events.vcf" into TIDDIT_intra_vcf
+        file "${bam_file.baseName}_FT_inter_chr_events.vcf" into TIDDIT_inter_vcf_files
+        file "${bam_file.baseName}_FT_intra_chr_events.vcf" into TIDDIT_intra_vcf_files
     
         script:
         """
@@ -72,10 +101,10 @@ if(!vcf_file.exists()){
         cpus 1
 
         input:
-        file bam_file
+        file bam_file from CNVnator_bam
     
         output: 
-            file  "${bam_file.baseName}_CNVnator.vcf" into CNVnator_vcf
+            file  "${bam_file.baseName}_CNVnator.vcf" into CNVnator_vcf_files
         script:
         """
         
@@ -95,13 +124,13 @@ if(!vcf_file.exists()){
         cpus 1
 
         input:
-        file bam_file
-        file CNVnator_vcf
-        file TIDDIT_inter_vcf
-        file TIDDIT_intra_vcf
+        file bam_file from combine_bam
+        file CNVnator_vcf from CNVnator_vcf_files
+        file TIDDIT_inter_vcf from TIDDIT_inter_vcf_files
+        file TIDDIT_intra_vcf from TIDDIT_intra_vcf_files
 
         output: 
-            file "${bam_file.baseName}_CombinedCalls.vcf" into combined_vcf
+            file "${bam_file.baseName}_CombinedCalls.vcf" into combined_vcf_files
 	    
 	    
 	    script:
@@ -115,10 +144,15 @@ if(!vcf_file.exists()){
         
     }
 
-    vcf_file=combined_vcf
+    vcf_files=combined_vcf_files
+    
+}else{
+	if(params.folder){
+		vcf_files=Channel.fromPath("${params.vcf}")
+	}else if(params.bam){
+		vcf_files=Channel.fromPath("${params.vcf}/")
+	}
 }
-
-
 
 process annotate{
     publishDir "${params.working_dir}"
@@ -126,10 +160,10 @@ process annotate{
     cpus 1
     
     input:
-        file vcf_file
-        file bam_file
+        file vcf_file from vcf_files
+        file bam_file from annotation_bam
+        file bai_file from bai_files
         file assemblatron_exec
-        file bai_file
         
     output:
         file "${bam_file.baseName}_FindSV.vcf" into final_FindSV_vcf
