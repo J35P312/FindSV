@@ -11,19 +11,44 @@ if(params.folder){
     }
 
 }else if(params.bam){
-    bam_files = file(params.bam)
-
-    if(!bam_files.exists()) exit 1, "Missing bam, use either --bam to analyse a bam file, or --bam and--vcf to annotate a vcf file"
-    bai_files=file("${params.bam}.bai")
-    if(!bai_files.exists()){
-    	bai_files=file("${bam_files}".replaceFirst(/.bam/,".bai"))
+    //first get the bam files, and check if all files exists   
+    //bam_files= Channel.from( params.bam.splitCsv() )
+    Channel.from( params.bam.splitCsv()).subscribe{
+        if(!file(it).exists()) exit 1, "Missing bam:${it}, use either --bam to analyse a bam file, or --bam and--vcf to annotate a vcf file"
+    }
+    bam_files=Channel.from(params.bam.splitCsv()).map{
+        line ->
+        bam = file(line)
+        [ bam ]
+  }
+    
+    
+    //then search for bai index, try both .bam.bai and .bai, stop if none is found
+    Channel.from( params.bam.splitCsv() ).subscribe{
+        if(file(it.replaceFirst(/.bam/,".bam.bai")).exists() ){
+            println it.replaceFirst(/.bam/,".bam.bai")
+        }else if(file(it.replaceFirst(/.bam/,".bai")).exists() ){
+            println it.replaceFirst(/.bam/,".bai")
+        }else{
+            println "Missing bai:${it}, each bam must be indexed"
+            exit 1
+        }
     }
     
-    
-    bam_files = Channel.fromPath(params.bam)
+   //all bam file are indxed, now we can create a bam index channel
+   bai_files=Channel.from(params.bam.splitCsv()).map {
+        line ->
+        if(file(line.replaceFirst(/.bam/,".bam.bai")).exists() ){
+            bai = file(line.replaceFirst(/.bam/,".bam.bai"))    
+        }else if(file(line.replaceFirst(/.bam/,".bai")).exists() ){
+            bai = file(line.replaceFirst(/.bam/,".bai"))
+        }
+        [ bai ]
+   }
+   
 }else{
     print "usage: nextflow FindSV_core.nf [--folder/--bam] --working_dir output_directory -c config_file\n"
-    print "--bam STR,	analyse a bam file, the bam files is asumed to be indexed\n"
+    print "--bam STR,	analyse a bam file, the bam files is asumed to be indexed\nAnalyse multiple bam files by separating the path of each bam files by ,"
     print "--folder STR,	analyse all bam files in the given folder, the bam fils are assumed to be indexed\n"
     print "-c STR,	the config file generated using the setup.py script\n"
     print "--working_dir STR,	the output directory, here all the vcf files will end up\n"
@@ -78,7 +103,7 @@ Channel
 if(!params.vcf){
 
     process TIDDIT {
-        publishDir "${params.working_dir}"
+        publishDir "${params.working_dir}", mode: 'copy', overwrite: true
         
         cpus 1
         
@@ -96,7 +121,7 @@ if(!params.vcf){
     }
 
     process CNVnator {
-        publishDir "${params.working_dir}"
+        publishDir "${params.working_dir}", mode: 'copy', overwrite: true
         
         cpus 1
 
@@ -119,7 +144,7 @@ if(!params.vcf){
     }
 
     process combine {
-        publishDir "${params.working_dir}"
+        publishDir "${params.working_dir}", mode: 'copy', overwrite: true
         
         cpus 1
 
@@ -149,13 +174,22 @@ if(!params.vcf){
 }else{
 	if(params.folder){
 		vcf_files=Channel.fromPath("${params.vcf}")
+		Channel.fromPath("${params.vcf}").subscribe{
+            if(!file(it).exists()) exit 1, "Missing vcf:${it}, use either --bam to analyse a bam file, or --bam and--vcf to annotate a vcf file"
+        }
 	}else if(params.bam){
-		vcf_files=Channel.fromPath("${params.vcf}/")
+        vcf_files= Channel.from(params.bam.splitCsv()).map {
+            line ->
+            vcf = file(line)
+            [ vcf ]
+        }
+		
 	}
+	
 }
 
 process annotate{
-    publishDir "${params.working_dir}"
+    publishDir "${params.working_dir}", mode: 'copy', overwrite: true
     
     cpus 1
     
