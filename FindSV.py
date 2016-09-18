@@ -258,7 +258,7 @@ elif args.restart:
         if full:
             bam_files.append({"bam":",".join(full),"mode":"full"})
         if annotation_bam:
-            bam_files.append({"bam":",".join(fannotation_bam),"vcf":",".join(fannotation_vcf),"mode":"annotate"})
+            bam_files.append({"bam":",".join(annotation_bam),"vcf":",".join(annotation_vcf),"mode":"annotate"})
         if bam_files:
             print_yaml(status,args.output)    
             status=worker(bam_files,args,status)
