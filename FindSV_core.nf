@@ -240,7 +240,7 @@ process annotate{
     python ${frequency_filter_exec} ${bam_file.baseName}_FindSV.vcf ${params.SVDB_limit} > ${vcf_file}.tmp
     mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
 
-    if ["OFF" != ${params.assemblatron} ]
+    if [ "OFF" != "${params.assemblatron}" ]
     then 
 	${params.FindSV_home}/nextflow ${assemblatron_exec} --genome ${params.reference_fasta} --vcf ${bam_file.baseName}_FindSV.vcf --bam ${bam_file} --working_dir assemblatron_output -c ${assemblatron_conf_file}
         python ${cleanVCF_exec} --vcf assemblatron_output/assemblator.vcf > ${bam_file.baseName}_FindSV.vcf
