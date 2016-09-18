@@ -178,7 +178,7 @@ if(!params.vcf){
             if(!file(it).exists()) exit 1, "Missing vcf:${it}, use either --bam to analyse a bam file, or --bam and--vcf to annotate a vcf file"
         }
 	}else if(params.bam){
-        vcf_files= Channel.from(params.bam.splitCsv()).map {
+        vcf_files= Channel.from(params.vcf.splitCsv()).map {
             line ->
             vcf = file(line)
             [ vcf ]
