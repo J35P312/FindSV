@@ -191,7 +191,7 @@ if(!params.vcf){
 process annotate{
     publishDir "${params.working_dir}", mode: 'copy', overwrite: true
     
-    cpus 1
+    cpus 2
     
     input:
         file vcf_file from vcf_files
