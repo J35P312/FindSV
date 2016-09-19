@@ -2,13 +2,18 @@
 
 if(params.folder){
     print "analysing all bam files in ${params.folder}\n"
-    bam_files=Channel.fromPath("${params.folder}/*.bam")
-    bai_files=Channel.fromPath("${params.folder}/*.bam.bai")
-    if( bai_files.toList().length() == 0 ){
-        bai_files=Channel.fromPath("${params.folder}/*.bai")
-    }else{
-        bai_files=Channel.fromPath("${params.folder}/*.bam.bai")
+	
+    bam_files=Channel.fromPath("${params.folder}/*.bam").map{
+    	line -> 
+    	["${file(line).baseName}".replaceFirst(/.bam/,""),file(line)]
+	}
+
+    bai_files=Channel.fromPath("${params.folder}/*.bai").map{
+        line ->
+        println "${file(line).baseName}".replaceFirst(/.bam/,"").replaceFirst(/.bai/,"")
+        [ "${file(line).baseName}".replaceFirst(/.bam/,"").replaceFirst(/.bai/,"") , file("${line}") ]
     }
+    
 
 }else if(params.bam){
     //first get the bam files, and check if all files exists   
@@ -16,13 +21,12 @@ if(params.folder){
     Channel.from( params.bam.splitCsv()).subscribe{
         if(!file(it).exists()) exit 1, "Missing bam:${it}, use either --bam to analyse a bam file, or --bam and--vcf to annotate a vcf file"
     }
-    bam_files=Channel.from(params.bam.splitCsv()).map{
-        line ->
-        bam = file(line)
-        [ bam ]
-  }
+	bam_files=Channel.from(params.bam.splitCsv()).map{
+    	line ->
+    	["${file(line).baseName}", file(line) ]
+	}	
     
-    
+
     //then search for bai index, try both .bam.bai and .bai, stop if none is found
     Channel.from( params.bam.splitCsv() ).subscribe{
         if(file(it.replaceFirst(/.bam/,".bam.bai")).exists() ){
@@ -35,16 +39,22 @@ if(params.folder){
         }
     }
     
-   //all bam file are indxed, now we can create a bam index channel
-   bai_files=Channel.from(params.bam.splitCsv()).map {
+    //all bam file are indxed, now we can create a bam index channel
+    bai_files=Channel.from(params.bam.splitCsv()).map{
         line ->
         if(file(line.replaceFirst(/.bam/,".bam.bai")).exists() ){
-            bai = file(line.replaceFirst(/.bam/,".bam.bai"))    
+            bai = file(line.replaceFirst(/.bam/,".bam.bai"))
+            [ "${file(line).baseName}",file(line.replaceFirst(/.bam/,".bam.bai")) ]   
         }else if(file(line.replaceFirst(/.bam/,".bai")).exists() ){
-            bai = file(line.replaceFirst(/.bam/,".bai"))
+            [ "${file(line).baseName}", file(line.replaceFirst(/.bam/,".bai")) ]
         }
-        [ bai ]
-   }
+        
+        
+    }	
+
+
+
+
    
 }else{
     print "usage: nextflow FindSV_core.nf [--folder/--bam] --working_dir output_directory -c config_file\n"
@@ -56,6 +66,10 @@ if(params.folder){
     exit 1
 }
 
+
+
+sample_data = bam_files.cross(bai_files).map{
+    	it ->  [it[0][0],it[0][1],it[1][1]] }
 
 TIDDIT_exec_file = file( "${params.TIDDIT_path}" )
 if(!TIDDIT_exec_file.exists()) exit 1, "Error: Missing TIDDIT executable, set the TIDDIT_path parameter in the config file"
@@ -91,13 +105,13 @@ assemblatron_conf_file = file("${params.FindSV_home}/TIDDIT/variant_assembly_fil
 
 TIDDIT_bam=Channel.create()
 CNVnator_bam=Channel.create()
-combine_bam=Channel.create()
 annotation_bam=Channel.create()
+combined_bam=Channel.create()
 
 Channel
-       	.from bam_files
-        .separate( TIDDIT_bam, CNVnator_bam, combine_bam,annotation_bam) { a -> [a, a, a,a,a] }
-
+       	.from sample_data
+        .separate( TIDDIT_bam,annotation_bam,combined_bam, CNVnator_bam) { a -> [a, a, a, a] }
+        
 
 //perform variant calling if the input is a bam fle
 if(!params.vcf){
@@ -109,11 +123,10 @@ if(!params.vcf){
         cpus 1
         
         input:
-        file bam_file from TIDDIT_bam
+        set ID,  file(bam_file), file(bai_file) from TIDDIT_bam
     
         output:
-        file "${bam_file.baseName}_FT_inter_chr_events.vcf" into TIDDIT_inter_vcf_files
-        file "${bam_file.baseName}_FT_intra_chr_events.vcf" into TIDDIT_intra_vcf_files
+        set ID, file("${bam_file.baseName}_FT_inter_chr_events.vcf"), file("${bam_file.baseName}_FT_intra_chr_events.vcf") into TIDDIT_output
     
         script:
         """
@@ -128,10 +141,11 @@ if(!params.vcf){
         cpus 1
 
         input:
-        file bam_file from CNVnator_bam
+        set ID,  file(bam_file), file(bai_file) from CNVnator_bam
     
         output: 
-            file  "${bam_file.baseName}_CNVnator.vcf" into CNVnator_vcf_files
+        set ID, "${bam_file.baseName}_CNVnator.vcf" into CNVnator_output
+            
         script:
         """
         
@@ -144,6 +158,14 @@ if(!params.vcf){
         rm cnvnator.root
         """
     }
+    
+    combined_data = TIDDIT_output.cross(CNVnator_output).map{
+        it ->  [it[0][0],it[0][1],it[0][2],it[1][1]]
+    }
+
+    combined_bam = combined_data.cross(combined_bam).map{
+        it ->  [it[0][0],it[1][1],it[1][2],it[0][1],it[0][2],it[0][3]]
+    }
 
     process combine {
         publishDir "${params.working_dir}", mode: 'copy', overwrite: true
@@ -152,13 +174,10 @@ if(!params.vcf){
         cpus 1
 
         input:
-        file bam_file from combine_bam
-        file CNVnator_vcf from CNVnator_vcf_files
-        file TIDDIT_inter_vcf from TIDDIT_inter_vcf_files
-        file TIDDIT_intra_vcf from TIDDIT_intra_vcf_files
+        set ID,file(bam_file), file(bai_file) , file(TIDDIT_inter_vcf), file(TIDDIT_intra_vcf), file(CNVnator_vcf) from combined_bam
 
         output: 
-            file "${bam_file.baseName}_CombinedCalls.vcf" into combined_vcf_files
+        set ID, file("${bam_file.baseName}_CombinedCalls.vcf") into combined_FindSV
 	    
 	    
 	    script:
@@ -172,23 +191,33 @@ if(!params.vcf){
         
     }
 
-    vcf_files=combined_vcf_files
+    vcf_files=annotation_bam.cross(combined_FindSV).map{
+        it ->  [it[0][1],it[0][2],it[1][1]]
+    }
     
 }else{
 	if(params.folder){
-		vcf_files=Channel.fromPath("${params.vcf}")
-		Channel.fromPath("${params.vcf}").subscribe{
-            if(!file(it).exists()) exit 1, "Missing vcf:${it}, use either --bam to analyse a bam file, or --bam and--vcf to annotate a vcf file"
-        }
-	}else if(params.bam){
-        vcf_files= Channel.from(params.vcf.splitCsv()).map {
+		vcf_input=Channel.fromPath("${params.vcf}").map {
             line ->
             vcf = file(line)
-            [ vcf ]
-        }
-		
-	}
-	
+            sample_id="${file(line).baseName}"
+            [ sample_id,vcf ]
+        }	
+
+        
+	}else if(params.bam){
+        vcf_input= Channel.from(params.vcf.splitCsv()).map {
+            line ->
+            vcf = file(line)
+            sample_id="${file(line).baseName}"
+            [ sample_id,vcf ]
+        }	
+    }
+
+vcf_files=annotation_bam.cross(vcf_input).map{
+    it ->  [it[0][1],it[0][2],it[1][1]] 
+}	
+
 }
 
 process annotate{
@@ -198,10 +227,8 @@ process annotate{
     cpus 2
     
     input:
-        file vcf_file from vcf_files
-        file bam_file from annotation_bam
-        file bai_file from bai_files
-        file assemblatron_exec
+    set file(bam_file), file(bai_file), file(vcf_file) from vcf_files
+    file assemblatron_exec
         
     output:
         file "${bam_file.baseName}_FindSV.vcf" into final_FindSV_vcf
