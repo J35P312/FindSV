@@ -199,18 +199,14 @@ if(!params.vcf){
 	if(params.folder){
 		vcf_input=Channel.fromPath("${params.vcf}").map {
             line ->
-            vcf = file(line)
-            sample_id="${file(line).baseName}"
-            [ sample_id,vcf ]
+            [ "${file(line).baseName}",file(line) ]
         }	
 
         
 	}else if(params.bam){
         vcf_input= Channel.from(params.vcf.splitCsv()).map {
             line ->
-            vcf = file(line)
-            sample_id="${file(line).baseName}"
-            [ sample_id,vcf ]
+            [ "${file(line).baseName}",file(line) ]
         }	
     }
 

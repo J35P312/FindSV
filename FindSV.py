@@ -57,10 +57,7 @@ def retrieve_status(status,nextflow_output):
                 tmp_dict[prefix][content[0]]["status"]="FAILED:{}".format(process)
                 tmp_dict[prefix][content[0]]["message"] += "\n" + line.strip()
                 tmp_dict[prefix]["status"]="FAILED:{}".format(process)
-            else:
-                print "FAILURE"
-                print message.strip()
-                break
+            print line.strip()
             
     for sample in tmp_dict:
             	        	
