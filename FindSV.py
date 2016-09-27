@@ -60,8 +60,11 @@ def retrieve_status(status,nextflow_output):
             print line.strip()
             
     for sample in tmp_dict:
-            	        	
-        sample_id,bam=retrieve_bam(tmp_dict[sample]["TIDDIT"]["working_dir"])
+            	     
+        if "TIDDIT" in tmp_dict[sample]:  	        	
+            sample_id,bam=retrieve_bam(tmp_dict[sample]["TIDDIT"]["working_dir"])
+        else:
+            sample_id,bam=retrieve_bam(tmp_dict[sample]["annotate"]["working_dir"])
         #we are reruning samples, update the sample info
         if sample_id in status:
             for step in tmp_dict[sample]:
@@ -107,6 +110,8 @@ def print_yaml(status,working_dir):
         if "FAILED" in status[sample]["status"]:
             print sample
             print status[sample]["status"]
+        if "SUBMITTED" == status[sample]["status"]:
+            status[sample]["status"] = "FAILED:CALLING"
     if not os.path.exists(working_dir):
         os.makedirs(working_dir)
     f = open(os.path.join(working_dir,"tracker.yml"), 'w')
@@ -234,7 +239,7 @@ elif args.restart:
             print_yaml(status,args.output)
             bam_files=",".join(bam_files)
             vcf_files=",".join(vcf_files)
-            status=worker([{"bam":bam_files,"vcf":vcf_files,"mode":"annotate"}],args,status)
+            status=worker([{"bam":bam_files,"vcf":args.output,"mode":"annotate"}],args,status)
             print_yaml(status,args.output)    
                      
     elif args.failed:
@@ -255,7 +260,7 @@ elif args.restart:
         if full:
             bam_files.append({"bam":",".join(full),"mode":"full"})
         if annotation_bam:
-            bam_files.append({"bam":",".join(annotation_bam),"vcf":",".join(annotation_vcf),"mode":"annotate"})
+            bam_files.append({"bam":",".join(annotation_bam),"vcf":args.output,"mode":"annotate"})
         if bam_files:
             print_yaml(status,args.output)    
             status=worker(bam_files,args,status)

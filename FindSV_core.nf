@@ -48,14 +48,30 @@ if(params.folder){
         }else if(file(line.replaceFirst(/.bam/,".bai")).exists() ){
             [ "${file(line).baseName}", file(line.replaceFirst(/.bam/,".bai")) ]
         }
+    }
+    if (params.vcf){
+        vcf_files=Channel.from(params.bam.splitCsv()).map{
+            line ->
+            if(file(line.replaceFirst(/.bam/,".bam.bai")).exists() ){
+                bai = file(line.replaceFirst(/.bam/,".bam.bai"))
+                [ file(line), file(line.replaceFirst(/.bam/,".bam.bai")) , file("${params.vcf}/${file(line).baseName}_CombinedCalls.vcf") ]   
+            }else if(file(line.replaceFirst(/.bam/,".bai")).exists() ){
+                [ file(line), file(line.replaceFirst(/.bam/,".bai")) , file("${params.vcf}/${file(line).baseName}_CombinedCalls.vcf") ]
+            }
+        } 
         
+        Channel.from(params.bam.splitCsv()).map{
+            line ->
+            if(file(line.replaceFirst(/.bam/,".bam.bai")).exists() ){
+                bai = file(line.replaceFirst(/.bam/,".bam.bai"))
+                [ file(line), file(line.replaceFirst(/.bam/,".bam.bai")) , file("${params.vcf}/${file(line).baseName}_CombinedCalls.vcf") ]   
+            }else if(file(line.replaceFirst(/.bam/,".bai")).exists() ){
+                [ file(line), file(line.replaceFirst(/.bam/,".bai")) , file("${params.vcf}/${file(line).baseName}_CombinedCalls.vcf") ]
+            }
+        }.subscribe{println it}   
+    }
         
-    }	
-
-
-
-
-   
+           
 }else{
     print "usage: nextflow FindSV_core.nf [--folder/--bam] --working_dir output_directory -c config_file\n"
     print "--bam STR,	analyse a bam file, the bam files is asumed to be indexed\nAnalyse multiple bam files by separating the path of each bam files by ,"
@@ -195,25 +211,6 @@ if(!params.vcf){
         it ->  [it[0][1],it[0][2],it[1][1]]
     }
     
-}else{
-	if(params.folder){
-		vcf_input=Channel.fromPath("${params.vcf}").map {
-            line ->
-            [ "${file(line).baseName}",file(line) ]
-        }	
-
-        
-	}else if(params.bam){
-        vcf_input= Channel.from(params.vcf.splitCsv()).map {
-            line ->
-            [ "${file(line).baseName}",file(line) ]
-        }	
-    }
-
-vcf_files=annotation_bam.cross(vcf_input).map{
-    it ->  [it[0][1],it[0][2],it[1][1]] 
-}	
-
 }
 
 process annotate{
