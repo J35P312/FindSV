@@ -47,10 +47,10 @@ def retrieve_status(status,nextflow_output):
                     
                 
             elif "terminated with an error" in line:
-                content=line.split("`")[1].split()   
+                content=line.split("`")[1]   
                 
                 process= "CALLING"
-                if content[1] == "annotate":
+                if "annotate" in content:
                     process="ANNOTATION"  
                 prefix=process_2_prefix[content[0]][content[1]]
                 
