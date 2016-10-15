@@ -251,7 +251,7 @@ process annotate{
     
     if [ "" != ${SVDB_file} ]
     then
-        python ${SVDB_exec_file} --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --db ${SVDB_file} > ${vcf_file}.tmp
+        python ${SVDB_exec_file} --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --sqdb ${SVDB_file} > ${vcf_file}.tmp
         mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
 
