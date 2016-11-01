@@ -96,6 +96,8 @@ contig_sort_exec_file = file("${params.contig_sort_path}")
 if(!contig_sort_exec_file.exists()) exit 1, "Error: Missing contig sort executable, set the contig sort parameter in the config file"
 
 SVDB_file = file("${params.SVDB_path}")
+pathogenic_db_file=file("${params.pathogenic_db_path}")
+benign_db_file=file("${params.benign_db_path}")
 
 genmod_rank_model_file = file("${params.genmod_rank_model_path}")
 
@@ -217,12 +219,11 @@ process annotate{
     publishDir "${params.working_dir}", mode: 'copy', overwrite: true
     errorStrategy 'ignore'    
 
-    cpus 2
+    cpus 1
     
     input:
     set file(bam_file), file(bai_file), file(vcf_file) from vcf_files
-    file assemblatron_exec
-        
+
     output:
         file "${bam_file.baseName}_FindSV.vcf" into final_FindSV_vcf
         
@@ -249,11 +250,18 @@ process annotate{
         mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
     
-    if [ "" != ${SVDB_file} ]
+    if [ "" != ${params.SVDB_path} ]
     then
         python ${SVDB_exec_file} --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --sqdb ${SVDB_file} > ${vcf_file}.tmp
         mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
+
+    if [ "" != ${params.pathogenic_db_path}]
+    then 
+        python ${SVDB_exec_file} --query --overlap ${params.pathogenic_db_overlap} --bnd_distance ${params.pathogenic_db_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --db ${pathogenic_db_file} --hit_tag PATHOGENIC > ${vcf_file}.tmp
+        mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
+    fi
+
 
     if [ "" != ${genmod_rank_model_file} ]
     then
@@ -264,10 +272,11 @@ process annotate{
     python ${frequency_filter_exec} ${bam_file.baseName}_FindSV.vcf ${params.SVDB_limit} > ${vcf_file}.tmp
     mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
 
-    if [ "" != "${params.assemblatron}" ]
+    if [ "" != ${params.benign_db_path}]
     then 
-	${params.FindSV_home}/nextflow ${assemblatron_exec} --genome ${params.reference_fasta} --vcf ${bam_file.baseName}_FindSV.vcf --bam ${bam_file} --working_dir assemblatron_output -c ${assemblatron_conf_file}
-        python ${cleanVCF_exec} --vcf assemblatron_output/assemblator.vcf > ${bam_file.baseName}_FindSV.vcf
+        python ${SVDB_exec_file} --query --overlap ${params.benign_db_overlap} --bnd_distance ${params.benign_db_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --db ${benign_db_file} --hit_tag BENIGN> ${vcf_file}.tmp
+        grep -v ";BENIGN=1" ${vcf_file}.tmp > ${bam_file.baseName}_FindSV.vcf
+        rm ${vcf_file}.tmp
     fi
 
     """

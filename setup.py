@@ -35,10 +35,6 @@ command=["{} {}".format(os.path.join(programDirectory,"internal_scripts/install_
 tmp=subprocess.check_output(command,shell = True)
 template=template.replace("{TIDDIT_path}", "\'{}\'".format(os.path.join(programDirectory,"TIDDIT/bin/TIDDIT")) )
 
-print "add the path to a bwa indexed reference file"
-selection=raw_input()
-template=template.replace("{REFERENCE_FASTA}", "\'{}\'".format(selection) )
-
 print "add cnvnator path, the path is set to cnvnator if left blank"
 selection=raw_input()
 if selection == "":
@@ -80,9 +76,23 @@ template=template.replace("{VEP_path}", "\'{}\'".format(selection) )
 print "intalling SVDB"
 template=template.replace("{SVDB_script_path}", "\'{}\'".format( os.path.join(programDirectory,"SVDB/SVDB.py") ) )
 os.system("git clone https://github.com/SciLifeLab/SVDB.git")
-print "add the path of vcf database file, this could be either a local made database or the thousand genome structural variant vcf"
+
+print "add the path of an SVDB sqlite database file"
 selection=raw_input()
 template=template.replace("{SVDB_path}", "\'{}\'".format(selection) )
+
+print "add the path of vcf database file containing known pathogenic variants(or press enter to continue)"
+selection=raw_input()
+if selection == "":
+    selection = "\"\""
+template=template.replace("{pathogenic_db_path}", "\'{}\'".format(selection) )
+
+
+print "add the path of vcf database file containing known benign variants(or press enter to continue)"
+selection=raw_input()
+if selection == "":
+    selection = "\"\""
+template=template.replace("{benign_db_path}", "\'{}\'".format(selection) )
 
 print "add the genmod ini file path, if left blank, the default genmod_SV.txt file will be used"
 selection=raw_input()
@@ -90,8 +100,10 @@ if selection == "":
     selection = os.path.join(programDirectory,"genmod_SV.txt")
 template=template.replace("{genmod_rank_model_path}", "\'{}\'".format(selection) )
 
-print "enter the filename of the new config file"
+print "enter the filename of the new config file(or leave blank to set the config file to FindSV.conf)"
 selection=raw_input()
+if selection == "":
+    selection = "FindSV.conf"
 f= open(selection, "w")
 f.write(template)
 f.close()
