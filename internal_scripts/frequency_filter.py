@@ -9,4 +9,6 @@ for line in open(sys.argv[1]):
 		info=line.split("\t")[7]
 		frequency=info.split("FRQ=")[-1].split(";")[0]
 		if float(frequency) <= float(sys.argv[2]):
-			print line.strip()		
+			print line.strip()
+	else:
+		print line.strip()
