@@ -274,7 +274,7 @@ process annotate{
 
     if [ "" != ${params.benign_db_path}]
     then 
-        python ${SVDB_exec_file} --query --overlap ${params.benign_db_overlap} --bnd_distance ${params.benign_db_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --db ${benign_db_file} --hit_tag BENIGN> ${vcf_file}.tmp
+        python ${SVDB_exec_file} --query --overlap ${params.benign_db_overlap} --bnd_distance ${params.benign_db_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --db ${benign_db_file} --hit_tag BENIGN > ${vcf_file}.tmp
         grep -v ";BENIGN=1" ${vcf_file}.tmp > ${bam_file.baseName}_FindSV.vcf
         rm ${vcf_file}.tmp
     fi
