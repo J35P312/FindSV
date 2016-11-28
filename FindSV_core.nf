@@ -137,7 +137,8 @@ if(!params.vcf){
     process TIDDIT {
         publishDir "${params.working_dir}", mode: 'copy', overwrite: true
         errorStrategy 'ignore'      
-  
+        tag { ID }
+    
         cpus 1
         
         input:
@@ -154,7 +155,8 @@ if(!params.vcf){
 
     process CNVnator {
         publishDir "${params.working_dir}", mode: 'copy', overwrite: true
-        errorStrategy 'ignore'        
+        errorStrategy 'ignore'
+        tag { ID }       
 
         cpus 1
 
@@ -217,7 +219,8 @@ if(!params.vcf){
 
 process annotate{
     publishDir "${params.working_dir}", mode: 'copy', overwrite: true
-    errorStrategy 'ignore'    
+    errorStrategy 'ignore'
+    tag { ID } 
 
     cpus 1
     
