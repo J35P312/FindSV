@@ -6,4 +6,5 @@
 #$4 the combined caller vcf file
 
 echo  "SAMPLE_ID":$1
-./nextflow FindSV_core.nf --bam $1 -c $2 --working_dir $3 --vcf $4
+mkdir $3
+./nextflow FindSV_core.nf --bam $1 -c $2 --working_dir $3 --vcf $4 -with-trace $3/trace.txt | tee $3/log.txt
