@@ -4,9 +4,9 @@ import yaml
 import os
 import re
 import fnmatch
-import subprocess
 import tempfile
 import glob
+import tempfile
 
 def get_output_dir(config):
     working_dir = None
@@ -16,90 +16,67 @@ def get_output_dir(config):
             working_dir= re.split('\"|\'',param[1])[1]
         
     return working_dir
-
-def retrieve_bam(working_dir):
-    programDirectory = os.path.dirname(os.path.abspath(__file__))
-    TIDDIT=os.path.join(programDirectory,"work",working_dir)+"**/*.bam"
-    bam=glob.glob(os.path.join(TIDDIT))[0]
-    prefix=bam.split("/")[-1].split(".bam")[0]
-    return([prefix,bam])
     
-def retrieve_status(status,nextflow_output):
+def retrieve_status(status,trace,working_dir):
 
     tmp_dict={}
     process_2_prefix={}
-    for message in nextflow_output:
-        for line in message.split("\n"):
-            if "Submitted" in line:
-                content=line.strip().split()
-                prefix,bam=retrieve_bam(content[0][1:-1])
-                if not prefix in tmp_dict:
-                    tmp_dict[prefix]={}
-                    tmp_dict[prefix]["status"]="SUCCESS"
-                tmp_dict[prefix][content[-2]]={}
-                tmp_dict[prefix][content[-2]]["working_dir"]=content[0][1:-1]
-                tmp_dict[prefix][content[-2]]["status"]="SUCCESS"
-                tmp_dict[prefix][content[-2]]["message"]=line.strip()
-                
-                if not content[-2] in process_2_prefix:
-                    process_2_prefix[content[-2]] = {}
-                process_2_prefix[content[-2]][content[-1]]=prefix
-                    
-                
-            elif "terminated with an error" in line:
-                content=line.split("`")[1]   
-                
-                process= "CALLING"
-                if "annotate" in content:
-                    process="ANNOTATION"  
-                prefix=process_2_prefix[content[0]][content[1]]
-                
-                tmp_dict[prefix][content[0]]["status"]="FAILED:{}".format(process)
-                tmp_dict[prefix][content[0]]["message"] += "\n" + line.strip()
-                tmp_dict[prefix]["status"]="FAILED:{}".format(process)
-            print line.strip()
+    first = True
+    for line in open(trace):
+        if first:
+            first = False
+            continue  
+        content=line.split("\t")
+        bam=content[-1]
+        prefix=bam.split("/")[-1].split(".bam")[0]
+        task=content[2].split()[0]
+        
+        if not prefix in tmp_dict:
+            tmp_dict[prefix]={}
+            tmp_dict[prefix]["status"]="SUCCESS"
+        tmp_dict[prefix][task]={}
+        tmp_dict[prefix][task]["working_dir"]=os.path.join(working_dir,content[1])
+        tmp_dict[prefix][task]["status"]=content[-2]
             
     for sample in tmp_dict:
-            	     
-        if "TIDDIT" in tmp_dict[sample]:  	        	
-            sample_id,bam=retrieve_bam(tmp_dict[sample]["TIDDIT"]["working_dir"])
-        else:
-            sample_id,bam=retrieve_bam(tmp_dict[sample]["annotate"]["working_dir"])
-        #we are reruning samples, update the sample info
-        if sample_id in status:
+        if "TIDDIT" in tmp_dict[sample]:
+            if  not tmp_dict[sample]["TIDDIT"]["status"] == "COMPLETED":
+                tmp_dict[sample]["status"] = "FAILED:CALLING"
+                
+        if "CNVnator" in tmp_dict[sample]:
+            if  not tmp_dict[sample]["CNVnator"]["status"] == "COMPLETED":
+                tmp_dict[sample]["status"] = "FAILED:CALLING"
+                
+        if "combine" in tmp_dict[sample]:
+            if  not tmp_dict[sample]["combine"]["status"] == "COMPLETED":
+                tmp_dict[sample]["status"] = "FAILED:CALLING"
+        if "annotate" in tmp_dict[sample]:
+            if  not tmp_dict[sample]["annotate"]["status"] == "COMPLETED":
+                tmp_dict[sample]["status"] = "FAILED:ANNOTATION"  
+
+        if sample in status:
             for step in tmp_dict[sample]:
-                    status[sample_id][step]=tmp_dict[sample][step]
+                    status[sample][step]=tmp_dict[sample][step]
         #we are analysing new sample, create the sample info
         else:
-            status[sample_id]=tmp_dict[sample]
+            status[sample]=tmp_dict[sample]
+            
+            
     return status
     
 def worker(bam_files,args,status):
     print "Processing, please do not turn FindSV off"
-    nextflow_path = os.path.join( os.path.dirname(os.path.abspath(__file__)),"nextflow")
+    #nextflow_path = os.path.join( os.path.dirname(os.path.abspath(__file__)),"nextflow")
+    temp_dir = tempfile.mkdtemp()
+    sample=bam_files[0]
+    if sample["mode"] == "full":
+        process=["./launch_core.sh",sample["bam"],args.config,args.output,temp_dir]
+    elif sample["mode"] == "annotate":
+        process=["./launch_core_reannotate.sh",sample["bam"],args.config,args.output,sample["vcf"],temp_dir]
+    os.system(" ".join(process))
     
-    processes=[]
-    for sample in bam_files:
-        f = tempfile.NamedTemporaryFile()
-        e = tempfile.NamedTemporaryFile()
-        if sample["mode"] == "full":
-            process=["./launch_core.sh",sample["bam"],args.config,args.output,nextflow_path]
-        elif sample["mode"] == "annotate":
-            process=["./launch_core_reannotate.sh",sample["bam"],args.config,args.output,sample["vcf"],nextflow_path]
-        p = subprocess.Popen(process,stdout=f,stderr=e)
-        processes.append((p, f,e))
-            
-    nextflow_output=[]
-    for p, f ,e in processes:
-        try:
-            print ("waiting for {} to finish... please hold".format(f.name))
-            p.wait()
-        except:
-            print "FAIL, unnable to contact:{}".format(f.name)
-        f.seek(0)
-        nextflow_output.append(f.read())
-        f.close()
-    status =  retrieve_status(status,nextflow_output)
+    status =  retrieve_status(status, os.path.join(temp_dir,"trace.txt"),args.output)
+    os.system("mv {}/* {}".format(temp_dir, args.output))
     
     return status
 
@@ -248,19 +225,13 @@ elif args.restart:
         annotation_bam=[]
         annotation_vcf=[]
         for sample in status:
-            if "FAILED:ANNOTATION" in status[sample]["status"]:
-               annotation_bam.append(status[sample]["bam_file"])
-               annotation_vcf.append(status[sample]["combined_caller_vcf"])
-               status[sample]["status"]="SUBMITTED"
-            elif "FAILED" in status[sample]["status"]:
+            if "FAILED" in status[sample]["status"]:
                full.append(status[sample]["bam_file"])
                status[sample]["status"]="SUBMITTED"
         
         bam_files=[]
         if full:
-            bam_files.append({"bam":",".join(full),"mode":"full"})
-        if annotation_bam:
-            bam_files.append({"bam":",".join(annotation_bam),"vcf":args.output,"mode":"annotate"})
+            bam_files= [{"bam":",".join(full),"mode":"full"} ]
         if bam_files:
             print_yaml(status,args.output)    
             status=worker(bam_files,args,status)

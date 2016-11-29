@@ -137,7 +137,7 @@ if(!params.vcf){
     process TIDDIT {
         publishDir "${params.working_dir}", mode: 'copy', overwrite: true
         errorStrategy 'ignore'      
-        tag { ID }
+        tag { bam_file }
     
         cpus 1
         
@@ -156,7 +156,7 @@ if(!params.vcf){
     process CNVnator {
         publishDir "${params.working_dir}", mode: 'copy', overwrite: true
         errorStrategy 'ignore'
-        tag { ID }       
+        tag { bam_file }       
 
         cpus 1
 
@@ -190,7 +190,7 @@ if(!params.vcf){
     process combine {
         publishDir "${params.working_dir}", mode: 'copy', overwrite: true
         errorStrategy 'ignore'        
-
+        tag { bam_file }
         cpus 1
 
         input:
@@ -220,7 +220,7 @@ if(!params.vcf){
 process annotate{
     publishDir "${params.working_dir}", mode: 'copy', overwrite: true
     errorStrategy 'ignore'
-    tag { ID } 
+    tag { bam_file } 
 
     cpus 1
     

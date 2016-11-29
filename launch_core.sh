@@ -5,6 +5,5 @@
 #$3 the output directory(aka publishdir)
 
 echo  "SAMPLE_ID":$1
-mkdir $3
-./nextflow FindSV_core.nf --bam $1 -c $2 --working_dir $3 -with-trace $3/trace.txt | tee $3/log.txt
+./nextflow FindSV_core.nf --bam $1 -c $2 --working_dir $3 -with-trace $4/trace.txt | tee $4/log.txt
 
