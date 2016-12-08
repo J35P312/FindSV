@@ -73,6 +73,8 @@ def worker(bam_files,args,status):
         process=["./launch_core.sh",sample["bam"],args.config,args.output,temp_dir]
     elif sample["mode"] == "annotate":
         process=["./launch_core_reannotate.sh",sample["bam"],args.config,args.output,sample["vcf"],temp_dir]
+    elif sample["mode"] == "restart_failed":
+        process=["./launch_core_restart_failed.sh",sample["bam_call"],sample["bam_annotate"],args.config,args.output,sample["vcf"],temp_dir]
     os.system(" ".join(process))
     
     status =  retrieve_status(status, os.path.join(temp_dir,"trace.txt"),args.output)
@@ -107,7 +109,7 @@ parser = argparse.ArgumentParser("FindSV core module",add_help=False)
 parser.add_argument('--bam', type=str,help="analyse the bam file using FindSV")
 parser.add_argument("--folder", type=str,help="analyse every bam file within a folder using FindSV")
 parser.add_argument('--output', type=str,default=None,help="the output is stored in this folder, default output folder is fetched from the config file") 
-parser.add_argument("--config",type=str,required=True, default=None,help="the config file")
+parser.add_argument("--config",type=str, default=None,help="the config file")
 parser.add_argument("--restart",action="store_true",help="restart module: perform the selected restart on the specified folder")
 args, unknown = parser.parse_known_args()
 
@@ -225,14 +227,23 @@ elif args.restart:
         annotation_bam=[]
         annotation_vcf=[]
         for sample in status:
-            if "FAILED" in status[sample]["status"]:
+            if "FAILED:ANNOTATION" in status[sample]["status"]:
+                annotation_bam.append(status[sample]["bam_file"])
+                annotation_vcf.append(status[sample]["combined_caller_vcf"])
+                status[sample]["status"]="SUBMITTED"
+            if "FAILED:CALLING" in status[sample]["status"]:
                full.append(status[sample]["bam_file"])
                status[sample]["status"]="SUBMITTED"
         
         bam_files=[]
-        if full:
-            bam_files= [{"bam":",".join(full),"mode":"full"} ]
-        if bam_files:
+        if full or annotation_bam:
+            bam_files= [ {"bam_call":",".join(full),"bam_annotate":",".join(annotation_bam),"vcf":",".join(annotation_vcf),"mode":"restart_failed"} ]
+            if not full:
+                bam_files[0]["bam_call"] == "NONE"
+            if not annotation_bam:
+                bam_files[0]["bam_annotate"] = "NONE"
+                bam_files[0]["vcf"] = "NONE"
+
             print_yaml(status,args.output)    
             status=worker(bam_files,args,status)
             print_yaml(status,args.output) 
