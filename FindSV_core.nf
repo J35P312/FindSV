@@ -1,5 +1,8 @@
 #!/usr/bin/env nextflow
 
+params.folder = ""
+params.vcf=""
+
 if(params.folder){
     print "analysing all bam files in ${params.folder}\n"
 	
@@ -123,16 +126,40 @@ assemblatron_conf_file = file("${params.FindSV_home}/TIDDIT/variant_assembly_fil
 
 TIDDIT_bam=Channel.create()
 CNVnator_bam=Channel.create()
+manta_bam=Channel.create()
 annotation_bam=Channel.create()
 combined_bam=Channel.create()
 
 Channel
        	.from sample_data
-        .separate( TIDDIT_bam,annotation_bam,combined_bam, CNVnator_bam) { a -> [a, a, a, a] }
+        .separate( TIDDIT_bam,annotation_bam,combined_bam, CNVnator_bam,manta_bam) { a -> [a, a, a, a,a] }
         
-
 //perform variant calling if the input is a bam fle
 if(!params.vcf){
+
+    //Then assemble the variants
+    process Manta {
+        errorStrategy 'ignore'      
+        tag { bam_file }
+    
+        cpus 1
+
+        input:
+        set ID,  file(bam_file), file(bai_file) from manta_bam
+
+        output:
+        set ID, "${bam_file.baseName}.candidateSV.vcf" into manta_output
+
+        script:
+        """
+
+        ${params.configManta} --normalBam ${bam_file} --reference ${params.genome} --runDir MANTA_DIR
+        python MANTA_DIR/runWorkflow.py -m local
+        gunzip -c MANTA_DIR/results/variants/candidateSV.vcf.gz  > ${bam_file.baseName}.candidateSV.vcf.tmp
+        grep -E "<|#" ${bam_file.baseName}.candidateSV.vcf.tmp > ${bam_file.baseName}.candidateSV.vcf
+        sed -ie 's/DUP:TANDEM/TDUP/g' ${bam_file.baseName}.candidateSV.vcf
+        """
+    }   
 
     process TIDDIT {
         publishDir "${params.working_dir}", mode: 'copy', overwrite: true
@@ -150,6 +177,7 @@ if(!params.vcf){
         script:
         """
         ${TIDDIT_exec_file} --sv -b ${bam_file} -p ${params.TIDDIT_pairs} -q ${params.TIDDIT_q} -o ${bam_file.baseName}_FT
+        rm *.tab
         """
     }
 
@@ -179,12 +207,16 @@ if(!params.vcf){
         """
     }
     
-    combined_data = TIDDIT_output.cross(CNVnator_output).map{
+    combined_TIDDIT_CNVnator = TIDDIT_output.cross(CNVnator_output).map{
         it ->  [it[0][0],it[0][1],it[0][2],it[1][1]]
     }
 
+    combined_data = combined_TIDDIT_CNVnator.cross(manta_output).map{
+        it ->  [it[0][0],it[0][1],it[0][2],it[0][3],it[1][1]]
+    }
+
     combined_bam = combined_data.cross(combined_bam).map{
-        it ->  [it[0][0],it[1][1],it[1][2],it[0][1],it[0][2],it[0][3]]
+        it ->  [it[0][0],it[1][1],it[1][2],it[0][1],it[0][2],it[0][3],it[0][4] ]
     }
 
     process combine {
@@ -194,7 +226,7 @@ if(!params.vcf){
         cpus 1
 
         input:
-        set ID,file(bam_file), file(bai_file) , file(TIDDIT_inter_vcf), file(TIDDIT_intra_vcf), file(CNVnator_vcf) from combined_bam
+        set ID,file(bam_file), file(bai_file) , file(TIDDIT_inter_vcf), file(TIDDIT_intra_vcf), file(CNVnator_vcf), file(manta_vcf) from combined_bam
 
         output: 
         set ID, file("${bam_file.baseName}_CombinedCalls.vcf") into combined_FindSV
@@ -203,8 +235,8 @@ if(!params.vcf){
 	    script:
 	    
         """
-        python ${SVDB_exec_file} --merge --no_var --pass_only --no_intra --overlap 0.7 --bnd_distance 2500 --vcf ${TIDDIT_inter_vcf} ${TIDDIT_intra_vcf} ${CNVnator_vcf} > merged.unsorted.vcf
-        
+        python ${SVDB_exec_file} --merge --no_var --no_intra --overlap 0.7 --bnd_distance 2500 --vcf ${TIDDIT_intra_vcf} ${manta_vcf} > TIDDIT_MANTA.vcf
+        python ${SVDB_exec_file} --merge --no_var --pass_only --no_intra --overlap 0.7 --bnd_distance 2500 --vcf ${TIDDIT_inter_vcf} TIDDIT_MANTA.vcf ${CNVnator_vcf} > merged.unsorted.vcf
         python ${contig_sort_exec_file} --vcf merged.unsorted.vcf --bam ${bam_file} > ${bam_file.baseName}_CombinedCalls.vcf
         rm merged.unsorted.vcf
         """

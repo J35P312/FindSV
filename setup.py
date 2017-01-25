@@ -35,6 +35,17 @@ command=["{} {}".format(os.path.join(programDirectory,"internal_scripts/install_
 tmp=subprocess.check_output(command,shell = True)
 template=template.replace("{TIDDIT_path}", "\'{}\'".format(os.path.join(programDirectory,"TIDDIT/bin/TIDDIT")) )
 
+print "Setting up manta"
+print "Set the manta configManta path, the path is set to configManta if left blank"
+selection=raw_input()
+if selection == "":
+    selection = "configManta"
+template=template.replace("configManta}", "\'{}\'".format(selection) )
+
+print "Set the path to the reference genome(needs to be indexed using bwa and samtools 0.19)"
+selection=raw_input()
+template=template.replace("{genome}", "\'{}\'".format(selection) )
+
 print "add cnvnator path, the path is set to cnvnator if left blank"
 selection=raw_input()
 if selection == "":
@@ -65,6 +76,7 @@ template=template.replace("{the_annotator_path}", "\'{}\'".format( os.path.join(
 template=template.replace("{gene_keys_dir_path}", "\'{}\'".format( os.path.join(programDirectory,"gene_keys") ) )
 template=template.replace("{frequency_filter_path}", "\'{}\'".format( os.path.join(programDirectory,"internal_scripts/frequency_filter.py") ) )
 template=template.replace("{FindSV_home_path}", "\'{}\'".format( os.path.join(programDirectory) ) )
+template=template.replace("{run_fermikit_path}", "\'{}\'".format( os.path.join(programDirectory,"internal_scripts/run_fermikit.py") ) )
 
 print "add the variant_effect_predictor.pl script path, the path is set to variant_effect_predictor.pl if left blank"
 print "remember to download the VEP cache file! more info is found on the VEP ENSMBLE website"
@@ -113,7 +125,7 @@ print "modules: print uppmax if you are using uppmax, print a line of each modul
 print "example: bioinfo-tools samtools CNVnator vep, to load the modules bioinfo-tools, sammtools, CNVnator and vep"
 selection=raw_input()
 if selection == "UPPMAX" or selection ==  "uppmax":
-    selection = "bioinfo-tools CNVnator samtools vep bwa abyss"
+    selection = "bioinfo-tools CNVnator samtools vep bwa abyss fermikit vcftools"
 
 print "creating conda environment"
 FindSV_env="source activate FindSV_env\n"
