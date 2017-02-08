@@ -155,7 +155,7 @@ if(!params.vcf){
 
         ${params.configManta} --normalBam ${bam_file} --reference ${params.genome} --runDir MANTA_DIR
         python MANTA_DIR/runWorkflow.py -m local
-        gunzip -c MANTA_DIR/results/variants/candidateSV.vcf.gz  > ${bam_file.baseName}.candidateSV.vcf.tmp
+        gunzip -c MANTA_DIR/results/variants/diploidSV.vcf.gz  > ${bam_file.baseName}.candidateSV.vcf.tmp
         grep -E "<|#" ${bam_file.baseName}.candidateSV.vcf.tmp > ${bam_file.baseName}.candidateSV.vcf
         sed -ie 's/DUP:TANDEM/TDUP/g' ${bam_file.baseName}.candidateSV.vcf
         """
