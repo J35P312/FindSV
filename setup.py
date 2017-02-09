@@ -125,7 +125,7 @@ print "modules: print uppmax if you are using uppmax, print a line of each modul
 print "example: bioinfo-tools samtools CNVnator vep, to load the modules bioinfo-tools, sammtools, CNVnator and vep"
 selection=raw_input()
 if selection == "UPPMAX" or selection ==  "uppmax":
-    selection = "bioinfo-tools CNVnator samtools vep bwa abyss fermikit vcftools"
+    selection = "bioinfo-tools CNVnator samtools vep bwa abyss manta vcftools"
 
 print "creating conda environment"
 FindSV_env="source activate FindSV_env\n"
