@@ -39,8 +39,8 @@ print "Setting up manta"
 print "Set the manta configManta path, the path is set to configManta if left blank"
 selection=raw_input()
 if selection == "":
-    selection = "configManta"
-template=template.replace("configManta}", "\'{}\'".format(selection) )
+    selection = "configManta.py"
+template=template.replace("{configManta}", "\'{}\'".format(selection) )
 
 print "Set the path to the reference genome(needs to be indexed using bwa and samtools 0.19)"
 selection=raw_input()
