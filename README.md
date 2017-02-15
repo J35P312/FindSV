@@ -1,6 +1,6 @@
 FindSV
 ===========
-FindSV is a structural variation pipeline written in nextflow and python. FindSV performs variant calling using TIDDIT and CNVnator.
+FindSV is a structural variation pipeline written in nextflow and python. FindSV performs variant calling using TIDDIT and CNVnator, and Manta.
 similar variants are merged, and the variants are annotated using VEP, frequency database, genmod, and custom annotation using the annotator script.
 
 FindSV needs to be setup using the setup.py script, this script will generate a config file aswell as a bash script for setting up the environment.
@@ -32,6 +32,7 @@ Installation
 Dependencies:
     Conda
     cnvnator
+    Manta
     variant effect predictor
     bwa
     
