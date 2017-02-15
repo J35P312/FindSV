@@ -87,7 +87,7 @@ template=template.replace("{VEP_path}", "\'{}\'".format(selection) )
 
 print "intalling SVDB"
 template=template.replace("{SVDB_script_path}", "\'{}\'".format( os.path.join(programDirectory,"SVDB/SVDB.py") ) )
-os.system("git clone https://github.com/J35P312/SVDB.git")
+os.system("git clone https://github.com/SciLifeLab/SVDB.git")
 
 print "add the path of an SVDB sqlite database file"
 selection=raw_input()
