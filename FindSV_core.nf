@@ -92,8 +92,6 @@ sample_data = bam_files.cross(bai_files).map{
 
 TIDDIT_exec_file = file( "${params.TIDDIT_path}" )
 if(!TIDDIT_exec_file.exists()) exit 1, "Error: Missing TIDDIT executable, set the TIDDIT_path parameter in the config file"
-SVDB_exec_file = file("${params.SVDB_script_path}")
-if(!SVDB_exec_file.exists()) exit 1, "Error: Missing SVDB executable, set the SVDB_script_path parameter in the config file"
 
 contig_sort_exec_file = file("${params.contig_sort_path}")
 if(!contig_sort_exec_file.exists()) exit 1, "Error: Missing contig sort executable, set the contig sort parameter in the config file"
@@ -142,7 +140,7 @@ if(!params.vcf){
         errorStrategy 'ignore'      
         tag { bam_file }
     
-        cpus 1
+        cpus 2
 
         input:
         set ID,  file(bam_file), file(bai_file) from manta_bam
@@ -154,13 +152,13 @@ if(!params.vcf){
         """
 
         ${params.configManta} --normalBam ${bam_file} --reference ${params.genome} --runDir MANTA_DIR
-        python MANTA_DIR/runWorkflow.py -m local
+        python MANTA_DIR/runWorkflow.py -m local -j 2
         gunzip -c MANTA_DIR/results/variants/diploidSV.vcf.gz  > ${bam_file.baseName}.candidateSV.vcf.tmp
         grep -E "<|#" ${bam_file.baseName}.candidateSV.vcf.tmp > ${bam_file.baseName}.candidateSV.vcf
         sed -ie 's/DUP:TANDEM/TDUP/g' ${bam_file.baseName}.candidateSV.vcf
         """
     }   
-
+ 
     process TIDDIT {
         publishDir "${params.working_dir}", mode: 'copy', overwrite: true
         errorStrategy 'ignore'      
@@ -172,11 +170,11 @@ if(!params.vcf){
         set ID,  file(bam_file), file(bai_file) from TIDDIT_bam
     
         output:
-        set ID, file("${bam_file.baseName}_FT_inter_chr_events.vcf"), file("${bam_file.baseName}_FT_intra_chr_events.vcf") into TIDDIT_output
+        set ID, "${bam_file.baseName}.vcf" into TIDDIT_output
     
         script:
         """
-        ${TIDDIT_exec_file} --sv -b ${bam_file} -p ${params.TIDDIT_pairs} -q ${params.TIDDIT_q} -o ${bam_file.baseName}_FT
+        ${TIDDIT_exec_file} --sv -b ${bam_file} -p ${params.TIDDIT_pairs} -q ${params.TIDDIT_q} -o ${bam_file.baseName}
         rm *.tab
         """
     }
@@ -208,15 +206,15 @@ if(!params.vcf){
     }
     
     combined_TIDDIT_CNVnator = TIDDIT_output.cross(CNVnator_output).map{
-        it ->  [it[0][0],it[0][1],it[0][2],it[1][1]]
+        it ->  [it[0][0],it[0][1],it[1][1]]
     }
 
     combined_data = combined_TIDDIT_CNVnator.cross(manta_output).map{
-        it ->  [it[0][0],it[0][1],it[0][2],it[0][3],it[1][1]]
+        it ->  [it[0][0],it[0][1],it[0][2],it[1][1]]
     }
 
     combined_bam = combined_data.cross(combined_bam).map{
-        it ->  [it[0][0],it[1][1],it[1][2],it[0][1],it[0][2],it[0][3],it[0][4] ]
+        it ->  [it[0][0],it[1][1],it[1][2],it[0][1],it[0][2],it[0][3] ]
     }
 
     process combine {
@@ -226,7 +224,7 @@ if(!params.vcf){
         cpus 1
 
         input:
-        set ID,file(bam_file), file(bai_file) , file(TIDDIT_inter_vcf), file(TIDDIT_intra_vcf), file(CNVnator_vcf), file(manta_vcf) from combined_bam
+        set ID,file(bam_file), file(bai_file), file(TIDDIT_vcf), file(CNVnator_vcf), file(manta_vcf) from combined_bam
 
         output: 
         set ID, file("${bam_file.baseName}_CombinedCalls.vcf") into combined_FindSV
@@ -235,8 +233,7 @@ if(!params.vcf){
 	    script:
 	    
         """
-        python ${SVDB_exec_file} --merge --no_var --no_intra --overlap 0.7 --bnd_distance 2500 --vcf ${TIDDIT_intra_vcf} ${manta_vcf} > TIDDIT_MANTA.vcf
-        python ${SVDB_exec_file} --merge --no_var --pass_only --no_intra --overlap 0.7 --bnd_distance 2500 --vcf ${TIDDIT_inter_vcf} TIDDIT_MANTA.vcf ${CNVnator_vcf} > merged.unsorted.vcf
+        svdb --merge --no_var --pass_only --no_intra --overlap 0.7 --bnd_distance 2500 --vcf ${manta_vcf} ${TIDDIT_vcf} ${CNVnator_vcf} > merged.unsorted.vcf
         python ${contig_sort_exec_file} --vcf merged.unsorted.vcf --bam ${bam_file} > ${bam_file.baseName}_CombinedCalls.vcf
         rm merged.unsorted.vcf
         """
@@ -273,7 +270,7 @@ process annotate{
     python ${cleanVCF_exec} --vcf ${bam_file.baseName}_FindSV.vcf > ${vcf_file}.tmp
     mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     
-    python ${SVDB_exec_file} --merge --overlap 1 --vcf --vcf ${bam_file.baseName}_FindSV.vcf > ${vcf_file}.tmp
+    svdb --merge --overlap 0.9 --vcf --vcf ${bam_file.baseName}_FindSV.vcf > ${vcf_file}.tmp
     mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     python ${contig_sort_exec_file} --vcf ${bam_file.baseName}_FindSV.vcf --bam ${bam_file} > ${vcf_file}.tmp
     mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
@@ -287,13 +284,13 @@ process annotate{
     
     if [ "" != ${params.SVDB_path} ]
     then
-        python ${SVDB_exec_file} --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --sqdb ${SVDB_file} > ${vcf_file}.tmp
+        svdb --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --sqdb ${SVDB_file} > ${vcf_file}.tmp
         mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
 
     if [ "" != ${params.pathogenic_db_path}]
     then 
-        python ${SVDB_exec_file} --query --overlap ${params.pathogenic_db_overlap} --bnd_distance ${params.pathogenic_db_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --db ${pathogenic_db_file} --hit_tag PATHOGENIC > ${vcf_file}.tmp
+        svdb --query --overlap ${params.pathogenic_db_overlap} --bnd_distance ${params.pathogenic_db_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --db ${pathogenic_db_file} --hit_tag PATHOGENIC > ${vcf_file}.tmp
         mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
 
@@ -309,7 +306,7 @@ process annotate{
 
     if [ "" != ${params.benign_db_path}]
     then 
-        python ${SVDB_exec_file} --query --overlap ${params.benign_db_overlap} --bnd_distance ${params.benign_db_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --db ${benign_db_file} --hit_tag BENIGN > ${vcf_file}.tmp
+        python svdb --query --overlap ${params.benign_db_overlap} --bnd_distance ${params.benign_db_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --db ${benign_db_file} --hit_tag BENIGN > ${vcf_file}.tmp
         grep -v ";BENIGN=1" ${vcf_file}.tmp > ${bam_file.baseName}_FindSV.vcf
         rm ${vcf_file}.tmp
     fi

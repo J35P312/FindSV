@@ -43,6 +43,15 @@ this script will ask a couple on questions, such as cnvnator path and reference 
 The cnvnator install scripts in the internal_scripts folder may be used to intall cnvnator.
 
 After running the setup script, two files will be generated, the config file, and the FindSV_env.sh script.
+To finnish installation, enter the environment:
+		source ./FindSV_env.sh
+
+thereafer, change directory to SVDB and install it:
+		cd SVDB
+		python setup.py install
+
+If this step is not performed, annotation and merging will be skipped.
+
 
 Restart module
 ============

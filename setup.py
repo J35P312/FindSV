@@ -87,10 +87,12 @@ template=template.replace("{VEP_path}", "\'{}\'".format(selection) )
 
 print "intalling SVDB"
 template=template.replace("{SVDB_script_path}", "\'{}\'".format( os.path.join(programDirectory,"SVDB/SVDB.py") ) )
-os.system("git clone https://github.com/SciLifeLab/SVDB.git")
+os.system("git clone https://github.com/J35P312/SVDB.git")
 
-print "add the path of an SVDB sqlite database file"
+print "add the path of an SVDB sqlite database file(or leave blank to skip the internal frequency db)"
 selection=raw_input()
+if selection == "":
+    selection = "\"\""
 template=template.replace("{SVDB_path}", "\'{}\'".format(selection) )
 
 print "add the path of vcf database file containing known pathogenic variants(or press enter to continue)"
@@ -129,8 +131,8 @@ if selection == "UPPMAX" or selection ==  "uppmax":
 
 print "creating conda environment"
 FindSV_env="source activate FindSV_env\n"
-command=["{} {} {}".format(os.path.join(programDirectory,"internal_scripts/CONDA/create_conda_env.sh"), os.path.join(programDirectory,"internal_scripts/CONDA/"), programDirectory)]
-tmp=subprocess.check_output(command,shell = True)
+command="{} {} {}".format(os.path.join(programDirectory,"internal_scripts/CONDA/create_conda_env.sh"), os.path.join(programDirectory,"internal_scripts/CONDA/"), programDirectory)
+os.system(command)
     
 if selection != "":
     FindSV_env += "module load {}\n".format(selection)
