@@ -252,7 +252,7 @@ if(!params.vcf){
             """
         }else{
             """
-            svdb --merge --pass_only --no_intra --overlap 0.7 --bnd_distance 250 --vcf ${TIDDIT_vcf} ${CNVnator_vcf} > merged.unsorted.vcf
+            svdb --merge --pass_only --no_intra --overlap 0.7 --bnd_distance 2500 --vcf ${TIDDIT_vcf} ${CNVnator_vcf} > merged.unsorted.vcf
             python ${contig_sort_exec_file} --vcf merged.unsorted.vcf --bam ${bam_file} > ${bam_file.baseName}_CombinedCalls.vcf
             rm merged.unsorted.vcf
             """
