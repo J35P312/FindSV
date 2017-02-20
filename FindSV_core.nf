@@ -134,31 +134,32 @@ Channel
         
 //perform variant calling if the input is a bam fle
 if(!params.vcf){
-
-    //Then assemble the variants
-    process Manta {
-        errorStrategy 'ignore'      
-        tag { bam_file }
+    if (!params.RunManta == "FALSE"){
+        //Then assemble the variants
+        process Manta {
+            errorStrategy 'ignore'      
+            tag { bam_file }
+        
+            cpus 2
     
-        cpus 2
+            input:
+            set ID,  file(bam_file), file(bai_file) from manta_bam
+    
+            output:
+            set ID, "${bam_file.baseName}.candidateSV.vcf" into manta_output
+    
+            script:
+            """
+    
+            ${params.configManta} --normalBam ${bam_file} --reference ${params.genome} --runDir MANTA_DIR
+            python MANTA_DIR/runWorkflow.py -m local -j 2
+            gunzip -c MANTA_DIR/results/variants/diploidSV.vcf.gz  > ${bam_file.baseName}.candidateSV.vcf.tmp
+            grep -E "<|#" ${bam_file.baseName}.candidateSV.vcf.tmp > ${bam_file.baseName}.candidateSV.vcf
+            sed -ie 's/DUP:TANDEM/TDUP/g' ${bam_file.baseName}.candidateSV.vcf
+            """
+        }   
+    }
 
-        input:
-        set ID,  file(bam_file), file(bai_file) from manta_bam
-
-        output:
-        set ID, "${bam_file.baseName}.candidateSV.vcf" into manta_output
-
-        script:
-        """
-
-        ${params.configManta} --normalBam ${bam_file} --reference ${params.genome} --runDir MANTA_DIR
-        python MANTA_DIR/runWorkflow.py -m local -j 2
-        gunzip -c MANTA_DIR/results/variants/diploidSV.vcf.gz  > ${bam_file.baseName}.candidateSV.vcf.tmp
-        grep -E "<|#" ${bam_file.baseName}.candidateSV.vcf.tmp > ${bam_file.baseName}.candidateSV.vcf
-        sed -ie 's/DUP:TANDEM/TDUP/g' ${bam_file.baseName}.candidateSV.vcf
-        """
-    }   
- 
     process TIDDIT {
         publishDir "${params.working_dir}", mode: 'copy', overwrite: true
         errorStrategy 'ignore'      
@@ -205,13 +206,23 @@ if(!params.vcf){
         """
     }
     
-    combined_TIDDIT_CNVnator = TIDDIT_output.cross(CNVnator_output).map{
-        it ->  [it[0][0],it[0][1],it[1][1]]
-    }
 
-    combined_data = combined_TIDDIT_CNVnator.cross(manta_output).map{
-        it ->  [it[0][0],it[0][1],it[0][2],it[1][1]]
-    }
+
+    if (!params.RunManta == "FALSE"){
+
+        combined_TIDDIT_CNVnator = TIDDIT_output.cross(CNVnator_output).map{
+            it ->  [it[0][0],it[0][1],it[1][1]]
+        }
+
+        combined_data = combined_TIDDIT_CNVnator.cross(manta_output).map{
+            it ->  [it[0][0],it[0][1],it[0][2],it[1][1]]
+        }
+    }else{
+        combined_data = TIDDIT_output.cross(CNVnator_output).map{
+            it ->  [it[0][0],it[0][1],it[1][1],it[1][1]]
+        }
+
+    }    
 
     combined_bam = combined_data.cross(combined_bam).map{
         it ->  [it[0][0],it[1][1],it[1][2],it[0][1],it[0][2],it[0][3] ]
@@ -231,14 +242,23 @@ if(!params.vcf){
 	    
 	    
 	    script:
-	    
-        """
-	svdb --merge --no_var --no_intra --overlap 0.7 --bnd_distance 2500 --vcf ${TIDDIT_vcf} ${manta_vcf} > PE_signals.vcf
-        svdb --merge --pass_only --no_intra --overlap 0.7 PE_signals.vcf ${CNVnator_vcf} > merged.unsorted.vcf
-        python ${contig_sort_exec_file} --vcf merged.unsorted.vcf --bam ${bam_file} > ${bam_file.baseName}_CombinedCalls.vcf
-        rm merged.unsorted.vcf
-        """
-        
+
+	    if (!params.RunManta == "FALSE"){
+            """
+            svdb --merge --no_var --no_intra --overlap 0.7 --bnd_distance 2500 --vcf ${TIDDIT_vcf} ${manta_vcf} > PE_signals.vcf
+            svdb --merge --pass_only --no_intra --overlap 0.7 --bnd_distance 2500 --vcf PE_signals.vcf ${CNVnator_vcf} > merged.unsorted.vcf
+            python ${contig_sort_exec_file} --vcf merged.unsorted.vcf --bam ${bam_file} > ${bam_file.baseName}_CombinedCalls.vcf
+            rm merged.unsorted.vcf
+            """
+        }else{
+            """
+            svdb --merge --pass_only --no_intra --overlap 0.7 --bnd_distance 250 --vcf ${TIDDIT_vcf} ${CNVnator_vcf} > merged.unsorted.vcf
+            python ${contig_sort_exec_file} --vcf merged.unsorted.vcf --bam ${bam_file} > ${bam_file.baseName}_CombinedCalls.vcf
+            rm merged.unsorted.vcf
+            """
+        }
+
+
     }
 
     vcf_files=annotation_bam.cross(combined_FindSV).map{

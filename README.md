@@ -32,13 +32,14 @@ Installation
 Dependencies:
     Conda
     cnvnator
-    Manta
+    Manta*
     variant effect predictor
     bwa
-    
+   
 After installing the dependencies, run the setup script:
     python setup.py
-    
+*Manta is optional, and will not be run per default. To enable manta, edit the config file so that the RunManta variable is not set to FALSE.
+ 
 this script will ask a couple on questions, such as cnvnator path and reference directory path. answer all these questions to finnish the setup.
 The cnvnator install scripts in the internal_scripts folder may be used to intall cnvnator.
 
