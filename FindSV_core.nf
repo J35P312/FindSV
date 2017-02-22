@@ -134,9 +134,11 @@ Channel
         
 //perform variant calling if the input is a bam fle
 if(!params.vcf){
-    if (!params.RunManta == "FALSE"){
+    print params.RunManta
+    if ("${params.RunManta}" != "FALSE"){
         //Then assemble the variants
         process Manta {
+            publishDir "${params.working_dir}", mode: 'copy', overwrite: true
             errorStrategy 'ignore'      
             tag { bam_file }
         
@@ -208,7 +210,7 @@ if(!params.vcf){
     
 
 
-    if (!params.RunManta == "FALSE"){
+    if ("${params.RunManta}" != "FALSE"){
 
         combined_TIDDIT_CNVnator = TIDDIT_output.cross(CNVnator_output).map{
             it ->  [it[0][0],it[0][1],it[1][1]]
@@ -243,7 +245,7 @@ if(!params.vcf){
 	    
 	    script:
 
-	    if (!params.RunManta == "FALSE"){
+        if ("${params.RunManta}" != "FALSE"){
             """
             svdb --merge --no_var --no_intra --overlap 0.7 --bnd_distance 2500 --vcf ${TIDDIT_vcf} ${manta_vcf} > PE_signals.vcf
             svdb --merge --pass_only --no_intra --overlap 0.7 --bnd_distance 2500 --vcf PE_signals.vcf ${CNVnator_vcf} > merged.unsorted.vcf
