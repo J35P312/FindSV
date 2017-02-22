@@ -134,7 +134,6 @@ Channel
         
 //perform variant calling if the input is a bam fle
 if(!params.vcf){
-    print params.RunManta
     if ("${params.RunManta}" != "FALSE"){
         //Then assemble the variants
         process Manta {
