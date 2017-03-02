@@ -147,7 +147,7 @@ if(!params.vcf){
             set ID,  file(bam_file), file(bai_file) from manta_bam
     
             output:
-            set ID, "${bam_file.baseName}.candidateSV.vcf" into manta_output
+            set ID, "${bam_file.baseName}.candidateSV.vcf"  into manta_output
     
             script:
             """
@@ -155,7 +155,7 @@ if(!params.vcf){
             ${params.configManta} --normalBam ${bam_file} --reference ${params.genome} --runDir MANTA_DIR
             python MANTA_DIR/runWorkflow.py -m local -j 2
             gunzip -c MANTA_DIR/results/variants/diploidSV.vcf.gz  > ${bam_file.baseName}.candidateSV.vcf.tmp
-            grep -E "<|#" ${bam_file.baseName}.candidateSV.vcf.tmp > ${bam_file.baseName}.candidateSV.vcf
+            grep -E "<|#|]|[" ${bam_file.baseName}.candidateSV.vcf.tmp > ${bam_file.baseName}.candidateSV.vcf
             sed -ie 's/DUP:TANDEM/TDUP/g' ${bam_file.baseName}.candidateSV.vcf
             """
         }   
@@ -284,7 +284,7 @@ process annotate{
     script:
     
     """
-    ${VEP_exec_file} --cache --force_overwrite --poly b -i ${vcf_file}  -o ${vcf_file}.tmp --buffer_size 5 --port 3337 --vcf --per_gene --format vcf -q
+    ${VEP_exec_file} -i ${vcf_file}  -o ${vcf_file}.tmp ${params.vep_args}
     mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     python ${clear_vep_exec} ${bam_file.baseName}_FindSV.vcf > ${vcf_file}.tmp
     mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
@@ -306,7 +306,7 @@ process annotate{
     
     if [ "" != ${params.SVDB_path} ]
     then
-        svdb --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --sqdb ${SVDB_file} > ${vcf_file}.tmp
+        svdb --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --db ${SVDB_file} > ${vcf_file}.tmp
         mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
 

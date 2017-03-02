@@ -89,7 +89,7 @@ print "intalling SVDB"
 template=template.replace("{SVDB_script_path}", "\'{}\'".format( os.path.join(programDirectory,"SVDB/SVDB.py") ) )
 os.system("git clone https://github.com/J35P312/SVDB.git")
 
-print "add the path of an SVDB sqlite database file(or leave blank to skip the internal frequency db)"
+print "add the path of an SVDB exported database file/sv vcf database(or leave blank to skip the frequency db)"
 selection=raw_input()
 if selection == "":
     selection = "\"\""
@@ -127,7 +127,7 @@ print "modules: print uppmax if you are using uppmax, print a line of each modul
 print "example: bioinfo-tools samtools CNVnator vep, to load the modules bioinfo-tools, sammtools, CNVnator and vep"
 selection=raw_input()
 if selection == "UPPMAX" or selection ==  "uppmax":
-    selection = "bioinfo-tools CNVnator samtools vep bwa abyss manta vcftools"
+    selection = "bioinfo-tools CNVnator samtools vep bwa manta vcftools"
 
 print "creating conda environment"
 FindSV_env="source activate FindSV_env\n"
@@ -139,7 +139,7 @@ if selection != "":
 if thisroot != "":
     FindSV_env += "source {}".format(thisroot)
 
-print "done! type source ./FindSV_env.sh before running FindSV to activate the FindSV environment, FindSV must be on during teh entire analysis, hence you might need to run a screen session to avoid interuption"
+print "done! type source ./FindSV_env.sh before running FindSV to activate the FindSV environment, FindSV must be on during the entire analysis, hence you might need to run a screen session to avoid interuption"
 
 f= open("FindSV_env.sh", "w")
 f.write(FindSV_env)
