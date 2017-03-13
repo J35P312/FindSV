@@ -87,7 +87,9 @@ template=template.replace("{VEP_path}", "\'{}\'".format(selection) )
 
 print "intalling SVDB"
 template=template.replace("{SVDB_script_path}", "\'{}\'".format( os.path.join(programDirectory,"SVDB/SVDB.py") ) )
-os.system("git clone https://github.com/J35P312/SVDB.git")
+os.system("wget https://github.com/J35P312/SVDB/archive/0.1.2.zip")
+os.system("unzip 0.1.2.zip")
+os.system("mv SVDB-0.1.2 SVDB")
 
 print "add the path of an SVDB exported database file/sv vcf database(or leave blank to skip the frequency db)"
 selection=raw_input()
