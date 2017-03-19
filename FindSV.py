@@ -237,9 +237,9 @@ elif args.restart:
         
         bam_files=[]
         if full or annotation_bam:
-            bam_files= [ {"bam_call":",".join(full),"bam_annotate":",".join(annotation_bam),"vcf":",".join(annotation_vcf),"mode":"restart_failed"} ]
+            bam_files= [ {"bam_call":",".join(full),"bam_annotate":",".join(annotation_bam),"vcf":args.output,"mode":"restart_failed"} ]
             if not full:
-                bam_files[0]["bam_call"] == "NONE"
+                bam_files[0]["bam_call"] = "NONE"
             if not annotation_bam:
                 bam_files[0]["bam_annotate"] = "NONE"
                 bam_files[0]["vcf"] = "NONE"
