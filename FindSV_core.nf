@@ -292,7 +292,7 @@ process annotate{
     python ${cleanVCF_exec} --vcf ${bam_file.baseName}_FindSV.vcf > ${vcf_file}.tmp
     mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     
-    svdb --merge --overlap 0.9 --vcf --vcf ${bam_file.baseName}_FindSV.vcf > ${vcf_file}.tmp
+    svdb --merge --overlap 0.9 --vcf ${bam_file.baseName}_FindSV.vcf > ${vcf_file}.tmp
     mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     python ${contig_sort_exec_file} --vcf ${bam_file.baseName}_FindSV.vcf --bam ${bam_file} > ${vcf_file}.tmp
     mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
