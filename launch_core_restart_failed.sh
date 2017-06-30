@@ -3,9 +3,12 @@
 #sample["bam_call"],sample["bam_annotate"],args.config,args.output,sample["vcf"],temp_dir
 
 echo  "SAMPLE_ID":$2
-if [ "NONE" != "$2" ]
+if [ "NONE" != "$2" ] && [ "NONE" != "$1]
     then
         ./nextflow FindSV_core.nf --bam $2 -c $3 --working_dir $4 --vcf $5 -with-trace $6/trace_annotate.txt | tee $6/log_annotation.txt &
+    elif [ "NONE" != "$2" ]
+        then
+            ./nextflow FindSV_core.nf --bam $2 -c $3 --working_dir $4 --vcf $5 -with-trace $6/trace_annotate.txt | tee $6/log_annotation.txt
     else
        > $6/log_annotation.txt
 fi
