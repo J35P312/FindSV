@@ -65,16 +65,19 @@ def retrieve_status(status,trace,working_dir):
     return status
     
 def worker(bam_files,args,status):
+    path=os.path.dirname(sys.argv[0])
+    if not path:
+        path = "."
     print "Processing, please do not turn FindSV off"
     #nextflow_path = os.path.join( os.path.dirname(os.path.abspath(__file__)),"nextflow")
     temp_dir = tempfile.mkdtemp()
     sample=bam_files[0]
     if sample["mode"] == "full":
-        process=["./launch_core.sh",sample["bam"],args.config,args.output,temp_dir]
+        process=["{}/launch_core.sh".format(path),sample["bam"],args.config,args.output,temp_dir]
     elif sample["mode"] == "annotate":
-        process=["./launch_core_reannotate.sh",sample["bam"],args.config,args.output,sample["vcf"],temp_dir]
+        process=["{}/launch_core_reannotate.sh".format(path),sample["bam"],args.config,args.output,sample["vcf"],temp_dir]
     elif sample["mode"] == "restart_failed":
-        process=["./launch_core_restart_failed.sh",sample["bam_call"],sample["bam_annotate"],args.config,args.output,sample["vcf"],temp_dir]
+        process=["{}/launch_core_restart_failed.sh".format(path),sample["bam_call"],sample["bam_annotate"],args.config,args.output,sample["vcf"],temp_dir]
     os.system(" ".join(process))
     
     status =  retrieve_status(status, os.path.join(temp_dir,"trace.txt"),args.output)

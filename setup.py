@@ -150,3 +150,8 @@ f.close()
 print "installing nextflow"
 os.system("curl -fsSL get.nextflow.io | bash")
 os.system("chmod +x FindSV_env.sh")
+
+print "installation complete! Remember to install svdb into the FindSV environment:"
+print "source FindSV_env.sh"
+print "cd SVDB"
+print "python setup.py install"

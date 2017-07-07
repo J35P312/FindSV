@@ -8,4 +8,5 @@
 
 echo  "SAMPLE_ID":$1
 mkdir $5
-./nextflow FindSV_core.nf --bam $1 -c $2 --working_dir $3 --vcf $4 -with-trace $5/trace.txt | tee $5/log.txt
+FindSV_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+$FindSV_dir/nextflow $FindSV_dir/FindSV_core.nf --bam $1 -c $2 --working_dir $3 --vcf $4 -with-trace $5/trace.txt | tee $5/log.txt
