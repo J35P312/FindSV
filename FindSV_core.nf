@@ -100,7 +100,7 @@ SVDB_file = file("${params.SVDB_path}")
 pathogenic_db_file=file("${params.pathogenic_db_path}")
 benign_db_file=file("${params.benign_db_path}")
 
-genmod_rank_model_file = file("${params.genmod_rank_model_path}")
+genmod_rank_model_file = params.genmod_rank_model_path
 
 CNVnator_exec_file=params.CNVnator_path
 //ROOT=file("${params.thisroot_path}")
@@ -310,7 +310,7 @@ process annotate{
         mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
 
-    if [ "" != ${params.pathogenic_db_path}]
+    if [ "" != ${params.pathogenic_db_path} ]
     then 
         svdb --query --overlap ${params.pathogenic_db_overlap} --bnd_distance ${params.pathogenic_db_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --db ${pathogenic_db_file} --hit_tag PATHOGENIC > ${vcf_file}.tmp
         mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
@@ -326,7 +326,7 @@ process annotate{
     python ${frequency_filter_exec} ${bam_file.baseName}_FindSV.vcf ${params.SVDB_limit} > ${vcf_file}.tmp
     mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
 
-    if [ "" != ${params.benign_db_path}]
+    if [ "" != ${params.benign_db_path} ]
     then 
         python svdb --query --overlap ${params.benign_db_overlap} --bnd_distance ${params.benign_db_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --db ${benign_db_file} --hit_tag BENIGN > ${vcf_file}.tmp
         grep -v ";BENIGN=1" ${vcf_file}.tmp > ${bam_file.baseName}_FindSV.vcf
