@@ -36,7 +36,7 @@ tmp=subprocess.check_output(command,shell = True)
 template=template.replace("{TIDDIT_path}", "\'{}\'".format(os.path.join(programDirectory,"TIDDIT/bin/TIDDIT")) )
 
 print "Setting up manta"
-print "Set the manta configManta path, the path is set to configManta if left blank"
+print "Set the manta configManta path, the path is set to configManta.py if left blank"
 selection=raw_input()
 if selection == "":
     selection = "configManta.py"
@@ -150,8 +150,3 @@ f.close()
 print "installing nextflow"
 os.system("curl -fsSL get.nextflow.io | bash")
 os.system("chmod +x FindSV_env.sh")
-
-print "installation complete! Remember to install svdb into the FindSV environment:"
-print "source FindSV_env.sh"
-print "cd SVDB"
-print "python setup.py install"

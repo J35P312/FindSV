@@ -3,7 +3,7 @@ FindSV
 FindSV is a structural variation pipeline written in nextflow and python. FindSV performs variant calling using TIDDIT and CNVnator, and Manta.
 similar variants are merged, and the variants are annotated using VEP, frequency database, genmod, and custom annotation using the annotator script.
 
-FindSV needs to be setup using the setup.py script, this script will generate a config file aswell as a bash script for setting up the environment.
+FindSV needs to be setup using the setup.sh script, this script will generate a config file aswell as a bash script for setting up the environment.
 
 Run
 ===
@@ -37,22 +37,11 @@ Dependencies:
     bwa
    
 After installing the dependencies, run the setup script:
-    python setup.py
+    ./setup.sh
 *Manta is optional, and will not be run per default. To enable manta, edit the config file so that the RunManta variable is not set to FALSE.
  
 this script will ask a couple on questions, such as cnvnator path and reference directory path. answer all these questions to finnish the setup.
 The cnvnator install scripts in the internal_scripts folder may be used to intall cnvnator.
-
-After running the setup script, two files will be generated, the config file, and the FindSV_env.sh script.
-To finnish installation, enter the environment:
-		source ./FindSV_env.sh
-
-thereafer, change directory to SVDB and install it:
-		cd SVDB
-		python setup.py install
-
-If this step is not performed, annotation and merging will be skipped.
-
 
 Restart module
 ============
