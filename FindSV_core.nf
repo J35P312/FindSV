@@ -140,23 +140,21 @@ if(!params.vcf){
             publishDir "${params.working_dir}", mode: 'copy', overwrite: true
             errorStrategy 'ignore'      
             tag { bam_file }
-        
+            scratch true
             cpus 2
     
             input:
             set ID,  file(bam_file), file(bai_file) from manta_bam
     
             output:
-            set ID, "${bam_file.baseName}.candidateSV.vcf"  into manta_output
+            set ID, "${bam_file.baseName}.diploidSV.vcf"  into manta_output
     
             script:
             """
-    
             ${params.configManta} --normalBam ${bam_file} --reference ${params.genome} --runDir MANTA_DIR
             python MANTA_DIR/runWorkflow.py -m local -j 2
-            gunzip -c MANTA_DIR/results/variants/diploidSV.vcf.gz  > ${bam_file.baseName}.candidateSV.vcf.tmp
-            grep -E "<|#|]|[" ${bam_file.baseName}.candidateSV.vcf.tmp > ${bam_file.baseName}.candidateSV.vcf
-            sed -ie 's/DUP:TANDEM/TDUP/g' ${bam_file.baseName}.candidateSV.vcf
+            gunzip -c MANTA_DIR/results/variants/diploidSV.vcf.gz  > ${bam_file.baseName}.diploidSV.vcf
+            sed -ie 's/DUP:TANDEM/TDUP/g' ${bam_file.baseName}.diploidSV.vcf
             """
         }   
     }
@@ -165,6 +163,7 @@ if(!params.vcf){
         publishDir "${params.working_dir}", mode: 'copy', overwrite: true
         errorStrategy 'ignore'      
         tag { bam_file }
+        scratch true
     
         cpus 1
         
@@ -176,7 +175,7 @@ if(!params.vcf){
     
         script:
         """
-        ${TIDDIT_exec_file} --sv -b ${bam_file} -p ${params.TIDDIT_pairs} -q ${params.TIDDIT_q} -o ${bam_file.baseName}
+        ${TIDDIT_exec_file} --sv -b ${bam_file} -p ${params.TIDDIT_pairs} -r 6 -q ${params.TIDDIT_q} -o ${bam_file.baseName}
         rm *.tab
         """
     }
@@ -185,6 +184,7 @@ if(!params.vcf){
         publishDir "${params.working_dir}", mode: 'copy', overwrite: true
         errorStrategy 'ignore'
         tag { bam_file }       
+        scratch true
 
         cpus 1
 
