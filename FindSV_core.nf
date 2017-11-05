@@ -175,7 +175,7 @@ if(!params.vcf){
     
         script:
         """
-        ${TIDDIT_exec_file} --sv -b ${bam_file} -p ${params.TIDDIT_pairs} -r 6 -q ${params.TIDDIT_q} -o ${bam_file.baseName}
+        python ${TIDDIT_exec_file} --sv -b ${bam_file} -p ${params.TIDDIT_pairs} -q ${params.TIDDIT_q} -o ${bam_file.baseName}
         rm *.tab
         """
     }
