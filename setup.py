@@ -33,7 +33,7 @@ template=template.replace("{working_dir}", "\'{}\'".format(selection) )
 print "installing and setting up TIDDIT"
 command=["{} {}".format(os.path.join(programDirectory,"internal_scripts/install_FT.sh"),programDirectory)]
 tmp=subprocess.check_output(command,shell = True)
-template=template.replace("{TIDDIT_path}", "\'{}\'".format(os.path.join(programDirectory,"TIDDIT/bin/TIDDIT")) )
+template=template.replace("{TIDDIT_path}", "\'{}\'".format(os.path.join(programDirectory,"TIDDIT/TIDDIT.py")) )
 
 print "Setting up manta"
 print "Set the manta configManta path, the path is set to configManta.py if left blank"
