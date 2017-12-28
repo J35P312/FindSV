@@ -62,8 +62,8 @@ for line in open(args.vcf):
                         found_tags[gene_list] += "|"+gene_lists[gene_list][gene]
         gene_tags=""
         for tag in found_tags:                
-            gene_tags +=  tag+"=" + found_tags[tag]
+            gene_tags +=  ";"+ tag+"=" + found_tags[tag]
         
         if len(found_tags) > 0:
-            content[7] += ";" + gene_tags
+            content[7] += gene_tags
         print "\t".join(content)
