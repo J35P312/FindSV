@@ -4,9 +4,7 @@ import yaml
 import os
 import re
 import fnmatch
-import tempfile
 import glob
-import tempfile
 
 def get_output_dir(config):
     working_dir = None
@@ -35,10 +33,14 @@ def retrieve_status(status,trace,working_dir):
             tmp_dict[prefix]={}
             tmp_dict[prefix]["status"]="SUCCESS"
         tmp_dict[prefix][task]={}
-        tmp_dict[prefix][task]["working_dir"]=os.path.join(working_dir,content[1])
+        tmp_dict[prefix][task]["working_dir"]=os.path.join(content[1])
         tmp_dict[prefix][task]["status"]=content[-2]
             
     for sample in tmp_dict:
+        if "Manta" in tmp_dict[sample]:
+            if  not tmp_dict[sample]["Manta"]["status"] == "COMPLETED":
+                tmp_dict[sample]["status"] = "FAILED:CALLING"
+			
         if "TIDDIT" in tmp_dict[sample]:
             if  not tmp_dict[sample]["TIDDIT"]["status"] == "COMPLETED":
                 tmp_dict[sample]["status"] = "FAILED:CALLING"
@@ -60,29 +62,37 @@ def retrieve_status(status,trace,working_dir):
         #we are analysing new sample, create the sample info
         else:
             status[sample]=tmp_dict[sample]
-            
-            
+                     
     return status
     
 def worker(bam_files,args,status):
     path=os.path.dirname(sys.argv[0])
     if not path:
         path = "."
-    print "Processing, please do not turn FindSV off"
-    #nextflow_path = os.path.join( os.path.dirname(os.path.abspath(__file__)),"nextflow")
-    temp_dir = tempfile.mkdtemp()
+    print "Processing, please do not turn off FindSV"
+
+    if os.path.isfile("{}/trace.txt".format(args.output)):
+        os.remove("{}/trace.txt".format(args.output))
+    if os.path.isfile("{}/log_annotation.txt".format(args.output)):
+        os.remove("{}/log_annotation.txt".format(args.output))
+    if os.path.isfile("{}/trace_call.txt".format(args.output)):
+        os.remove("{}/trace_call.txt".format(args.output))
+
+    os.system("mkdir {}".format(args.output))
+    f=open("{}/lock".format(args.output),"w")
+    f.write("If this file is not deleted, the analysis is either ongoing, or it crashed.\n You need to remove this file in order to retry the analysis.\n Do not delete this file if the analyis is ongoing!")
+    f.close()
+    
     sample=bam_files[0]
     if sample["mode"] == "full":
-        process=["{}/launch_core.sh".format(path),sample["bam"],args.config,args.output,temp_dir]
+        process=["{}/launch_core.sh".format(path),sample["bam"],args.config,args.output]
     elif sample["mode"] == "annotate":
-        process=["{}/launch_core_reannotate.sh".format(path),sample["bam"],args.config,args.output,sample["vcf"],temp_dir]
+        process=["{}/launch_core_reannotate.sh".format(path),sample["bam"],args.config,args.output,sample["vcf"]]
     elif sample["mode"] == "restart_failed":
-        process=["{}/launch_core_restart_failed.sh".format(path),sample["bam_call"],sample["bam_annotate"],args.config,args.output,sample["vcf"],temp_dir]
+        process=["{}/launch_core_restart_failed.sh".format(path),sample["bam_call"],sample["bam_annotate"],args.config,args.output,sample["vcf"]]
     os.system(" ".join(process))
     
-    status =  retrieve_status(status, os.path.join(temp_dir,"trace.txt"),args.output)
-    os.system("mv {}/* {}".format(temp_dir, args.output))
-    
+    status =  retrieve_status(status, os.path.join(args.output,"trace.txt"),args.output)
     return status
 
 def print_yaml(status,working_dir):
@@ -92,14 +102,23 @@ def print_yaml(status,working_dir):
         if "FAILED" in status[sample]["status"]:
             print sample
             print status[sample]["status"]
-        if "SUBMITTED" == status[sample]["status"]:
-            status[sample]["status"] = "FAILED:CALLING"
+
     if not os.path.exists(working_dir):
         os.makedirs(working_dir)
+    if os.path.isfile(os.path.join(working_dir,"tracker.yml")):
+        os.system("cp {} {}".format(os.path.join(working_dir,"tracker.yml"),os.path.join(working_dir,"tracker.bkp")))
     f = open(os.path.join(working_dir,"tracker.yml"), 'w')
     f.write(yaml.dump(status))
     f.close()
+    os.remove("{}/lock".format(working_dir))
+
     print "DONE"
+
+def check_lock(working_dir):
+    if os.path.isfile(os.path.join(working_dir,"lock")):
+        print ("error: the ouput directory is locked! Choose another output directory, or wait for the ongoing analysis to finish")
+        print ("If the analysis crashed, remove the lock file and restart the analysis")
+        quit()
 
 def read_yaml(working_dir):
     status={}
@@ -108,16 +127,18 @@ def read_yaml(working_dir):
             status=yaml.load(stream)
     return status
 
-parser = argparse.ArgumentParser("FindSV core module",add_help=False)
+parser = argparse.ArgumentParser("FindSV",add_help=False)
 parser.add_argument('--bam', type=str,help="analyse the bam file using FindSV")
 parser.add_argument("--folder", type=str,help="analyse every bam file within a folder using FindSV")
 parser.add_argument('--output', type=str,default=None,help="the output is stored in this folder, default output folder is fetched from the config file") 
 parser.add_argument("--config",type=str, default=None,help="the config file")
 parser.add_argument("--restart",action="store_true",help="restart module: perform the selected restart on the specified folder")
 args, unknown = parser.parse_known_args()
-
 programDirectory = os.path.dirname(os.path.abspath(__file__)) 
-#analyse one single bam file   
+#analyse one single bam file
+
+
+
 if args.bam:
     parser = argparse.ArgumentParser("FindSV core module",add_help=False)
     parser.add_argument('--bam', type=str,help="analyse the bam file using FindSV")
@@ -127,6 +148,7 @@ if args.bam:
     
     if not args.output:
         args.output=get_output_dir(args.config)
+    check_lock(args.output)
     
     status=read_yaml(args.output)
     prefix=args.bam.split("/")[-1].replace(".bam","")
@@ -134,7 +156,6 @@ if args.bam:
         status[prefix]={}
         status[prefix]["bam_file"]=args.bam
         status[prefix]["status"]="SUBMITTED"
-        print_yaml(status,args.output)
     
         status=worker([{"bam":args.bam,"mode":"full"}],args,status)
         print_yaml(status,args.output)
@@ -152,6 +173,8 @@ elif args.folder:
     if not args.output:
         args.output=get_output_dir(args.config)
     status=read_yaml(args.output)
+    check_lock(args.output)
+
     bam_files=[]
     for root, dirnames, filenames in os.walk(args.folder):
         for filename in fnmatch.filter(filenames, '*.bam'):
@@ -165,7 +188,6 @@ elif args.folder:
     
     if bam_files: 
     
-        print_yaml(status,args.output)
         bam_files=",".join(bam_files) 
         status=worker([{"bam":bam_files,"mode":"full"}],args,status)
         print_yaml(status,args.output)
@@ -187,6 +209,7 @@ elif args.restart:
     if not args.output:
         args.output=get_output_dir(args.config)
     status=read_yaml(args.output)
+    check_lock(args.output)
     
     #restart everything
     if args.full:
@@ -203,7 +226,6 @@ elif args.restart:
             status[prefix]["status"]="SUBMITTED" 
      
         if bam_files: 
-            print_yaml(status,args.output)
             bam_files=",".join(bam_files)     
             status=worker([{"bam":bam_files,"mode":"full"}],args,status)
             print_yaml(status,args.output)
@@ -218,7 +240,6 @@ elif args.restart:
                 status[sample]["status"]="SUBMITTED"
                 
         if bam_files:
-            print_yaml(status,args.output)
             bam_files=",".join(bam_files)
             vcf_files=",".join(vcf_files)
             status=worker([{"bam":bam_files,"vcf":args.output,"mode":"annotate"}],args,status)
@@ -246,8 +267,7 @@ elif args.restart:
             if not annotation_bam:
                 bam_files[0]["bam_annotate"] = "NONE"
                 bam_files[0]["vcf"] = "NONE"
-
-            print_yaml(status,args.output)    
+  
             status=worker(bam_files,args,status)
             print_yaml(status,args.output) 
             

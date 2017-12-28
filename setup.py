@@ -1,6 +1,8 @@
 import os
 import subprocess
+import sys
 
+install=int(sys.argv[1])
 programDirectory = os.path.dirname(os.path.abspath(__file__))
 with open(os.path.join(programDirectory,"config_template/FindSV.config"), 'r') as myfile:
     template=myfile.read()
@@ -30,10 +32,16 @@ print "enter the standard output directory"
 selection=raw_input()
 template=template.replace("{working_dir}", "\'{}\'".format(selection) )
 
-print "installing and setting up TIDDIT"
-command=["{} {}".format(os.path.join(programDirectory,"internal_scripts/install_FT.sh"),programDirectory)]
-tmp=subprocess.check_output(command,shell = True)
-template=template.replace("{TIDDIT_path}", "\'{}\'".format(os.path.join(programDirectory,"TIDDIT/TIDDIT.py")) )
+if install:
+    print "installing and setting up TIDDIT"
+    command=["{} {}".format(os.path.join(programDirectory,"internal_scripts/install_FT.sh"),programDirectory)]
+    tmp=subprocess.check_output(command,shell = True)
+    template=template.replace("{TIDDIT_path}", "\'{}\'".format(os.path.join(programDirectory,"TIDDIT/TIDDIT.py")) )
+else:
+    print "set the path to the TIDDIT.py script. leave blank if TIDDIT is not yet installed"
+    selection=raw_input()
+    template=template.replace("{TIDDIT_path}", "\'{}\'".format(selection) )
+
 
 print "Setting up manta"
 print "Set the manta configManta path, the path is set to configManta.py if left blank"
@@ -80,14 +88,16 @@ template=template.replace("{run_fermikit_path}", "\'{}\'".format( os.path.join(p
 
 print "add the variant_effect_predictor.pl script path, the path is set to variant_effect_predictor.pl if left blank"
 print "remember to download the VEP cache file! more info is found on the VEP ENSMBLE website"
+
 selection=raw_input()
 if selection == "":
     selection = "variant_effect_predictor.pl"
 template=template.replace("{VEP_path}", "\'{}\'".format(selection) )
 
-print "intalling SVDB"
-template=template.replace("{SVDB_script_path}", "\'{}\'".format( os.path.join(programDirectory,"SVDB/SVDB.py") ) )
-os.system("git clone https://github.com/J35P312/SVDB.git")
+if install:
+    print "intalling SVDB"
+    template=template.replace("{SVDB_script_path}", "\'{}\'".format( os.path.join(programDirectory,"SVDB/SVDB.py") ) )
+    os.system("git clone https://github.com/J35P312/SVDB.git")
 
 print "add the path of an SVDB exported database file/sv vcf database(or leave blank to skip the frequency db)"
 selection=raw_input()
@@ -124,16 +134,20 @@ f.close()
 
 print "creating FindSV environment script"
 print "modules: print uppmax if you are using uppmax, print a line of each module to use, or leave empty to skip modules"
-print "example: bioinfo-tools samtools CNVnator vep, to load the modules bioinfo-tools, sammtools, CNVnator and vep"
+print "example: bioinfo-tools samtools CNVnator vep, to load the modules bioinfo-tools, samtools, CNVnator and vep"
 selection=raw_input()
 if selection == "UPPMAX" or selection ==  "uppmax":
     selection = "bioinfo-tools CNVnator samtools vep bwa manta vcftools"
 
 print "creating conda environment"
 FindSV_env="source activate FindSV_env\n"
-command="{} {} {}".format(os.path.join(programDirectory,"internal_scripts/CONDA/create_conda_env.sh"), os.path.join(programDirectory,"internal_scripts/CONDA/"), programDirectory)
-os.system(command)
-    
+if install:
+    command="{} {} {}".format(os.path.join(programDirectory,"internal_scripts/CONDA/create_conda_env.sh"), os.path.join(programDirectory,"internal_scripts/CONDA/"), programDirectory)
+    os.system(command)
+else:
+    print "remember to install the FindSV conda environment:"
+    print "{} {} {}".format(os.path.join(programDirectory,"internal_scripts/CONDA/create_conda_env.sh"), os.path.join(programDirectory,"internal_scripts/CONDA/"), programDirectory)
+
 if selection != "":
     FindSV_env += "module load {}\n".format(selection)
 if thisroot != "":
@@ -142,7 +156,9 @@ if thisroot != "":
 f= open("FindSV_env.sh", "w")
 f.write(FindSV_env)
 f.close()
-
-print "installing nextflow"
-os.system("curl -fsSL get.nextflow.io | bash")
+if install:
+    print "installing nextflow"
+    os.system("curl -fsSL get.nextflow.io | bash")
+else:
+    "skipped installing nexflow"
 os.system("chmod +x FindSV_env.sh")

@@ -220,7 +220,7 @@ if(!params.vcf){
         }
     }else{
         combined_data = TIDDIT_output.cross(CNVnator_output).map{
-            it ->  [it[0][0],it[0][1],it[1][1],file(${params.genome})]
+            it ->  [it[0][0],it[0][1],it[1][1],file(params.genome)]
         }
 
     }    

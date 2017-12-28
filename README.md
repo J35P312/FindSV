@@ -43,6 +43,17 @@ After installing the dependencies, run the setup script:
 this script will ask a couple on questions, such as cnvnator path and reference directory path. answer all these questions to finnish the setup.
 The cnvnator install scripts in the internal_scripts folder may be used to intall cnvnator.
 
+The setup script will atempt to connect the internet to install a couple of softwares (SVDB, TIDDIT), as well as the conda environment(found in the internal_scripts folder). If you do not have internet access, you may run
+
+./setup.sh noinstall
+
+This setting will allow you to skip those install steps. You still need to install these tools manually.
+
+Nexflow:
+
+Nextflow is installed through the setup.sh script. and FindSV assumes that nextflow is installed into the FindSV folder.
+If nextflow cannot be installed using the setup.sh script (e.g no internet access), you will need to change the nextflow path in the launch_core_*.sh scripts.
+
 Restart module
 ============
 for info on how to restart samples analysed by the FindSV- pipeline, type:
@@ -60,13 +71,22 @@ Gene_Keys
 ==========
 
 add tab files to this folder to annotate genes.
-These files should contain two columns, the first column is the gene, and the second column is a gene tag.
+These files should contain two columns, the first column is the HGNC ID of the  gene, and the second column is a gene tag.
 If a variant cover a tagged gene, that gene tag will be added to the vcf entry of that variant. As default, the OMIM id of any
-affected gene will be added to the variant using the OMIM.txt tab file.
+affected gene will be added to the variant using the OMIM.txt tab file. Additionally, the OMIM Morbid genes will be flagged. These datassets were downloaded via the ENSEMBL biomart
 
 Frequency database
 ==========
+The frequency database is a vcf file. These vcf files are either multisample vcf files, or they contain OCC or FRQ tags as generated via SVDB. These files may be produced using SVDB, or any SV caller that performs multi-sample calling.
+Additionally, the swegen SVDB files may be used as a database:
+
+https://swefreq.nbis.se/
 
 Genmod
 ========
+Genmod is a tool for creating rankscores for variants. Visit the genmod website for more information.
+
+https://github.com/moonso/genmod
+
+
 
