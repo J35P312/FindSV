@@ -56,12 +56,12 @@ template=template.replace("{frequency_filter_path}", "\'{}\'".format( os.path.jo
 template=template.replace("{FindSV_home_path}", "\'{}\'".format( os.path.join(programDirectory) ) )
 template=template.replace("{run_fermikit_path}", "\'{}\'".format( os.path.join(programDirectory,"internal_scripts/run_fermikit.py") ) )
 
-print "add the variant_effect_predictor.pl script path, the path is set to variant_effect_predictor.pl if left blank"
+print "add the variant_effect_predictor.pl script path, the path is set to vep if left blank"
 print "remember to download the VEP cache file! more info is found on the VEP ENSMBLE website"
 
 selection=raw_input()
 if selection == "":
-    selection = "variant_effect_predictor.pl"
+    selection = "vep"
 template=template.replace("{VEP_path}", "\'{}\'".format(selection) )
 
 print "add the path of an SVDB exported database file/sv vcf database(or leave blank to skip the frequency db)"
@@ -102,7 +102,7 @@ print "modules: print uppmax if you are using uppmax. Otherwise, print a line of
 print "example: bioinfo-tools vep, to load the modules bioinfo-tools and vep"
 selection=raw_input()
 if selection == "UPPMAX" or selection ==  "uppmax":
-    selection = "bioinfo-tools vep bwa manta vcftools Nextflow"
+    selection = "bioinfo-tools vep manta vcftools Nextflow"
 
 FindSV_env=""
 if selection != "":
