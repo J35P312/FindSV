@@ -2,7 +2,6 @@ import os
 import subprocess
 import sys
 
-install=int(sys.argv[1])
 programDirectory = os.path.dirname(os.path.abspath(__file__))
 with open(os.path.join(programDirectory,"config_template/FindSV.config"), 'r') as myfile:
     template=myfile.read()
@@ -12,7 +11,7 @@ while True:
     print "print 1 for local executor, or 2 for slurm"
     selection=raw_input()
     if not selection in valid_response:
-        print "invalid option, print 1 for local executor, or 2 for slurm"
+        print "invalid option, print 1 for local  executor (i.e you run the jobs locally, on the cores available to you), or 2 for slurm (i.e nextflow will submit jobs via slurm)"
     else:
 
         if selection == "1":
@@ -32,17 +31,6 @@ print "enter the standard output directory"
 selection=raw_input()
 template=template.replace("{working_dir}", "\'{}\'".format(selection) )
 
-if install:
-    print "installing and setting up TIDDIT"
-    command=["{} {}".format(os.path.join(programDirectory,"internal_scripts/install_FT.sh"),programDirectory)]
-    tmp=subprocess.check_output(command,shell = True)
-    template=template.replace("{TIDDIT_path}", "\'{}\'".format(os.path.join(programDirectory,"TIDDIT/TIDDIT.py")) )
-else:
-    print "set the path to the TIDDIT.py script. leave blank if TIDDIT is not yet installed"
-    selection=raw_input()
-    template=template.replace("{TIDDIT_path}", "\'{}\'".format(selection) )
-
-
 print "Setting up manta"
 print "Set the manta configManta path, the path is set to configManta.py if left blank"
 selection=raw_input()
@@ -54,27 +42,9 @@ print "Set the path to the reference genome(needs to be indexed using bwa and sa
 selection=raw_input()
 template=template.replace("{genome}", "\'{}\'".format(selection) )
 
-print "add cnvnator path, the path is set to cnvnator if left blank"
-selection=raw_input()
-if selection == "":
-    selection = "cnvnator"
-template=template.replace("{CNVnator_path}", "\'{}\'".format(selection) )
-  
-print "if the ROOTSYS variable is not set, add the path to the thisroot.sh script inside the root bin folder, leave blank otherwise(open another terminal and print echo $ROOTSYS to check)"
-selection=raw_input()
-template=template.replace("{thisroot_path}", "\'{}\'".format(selection) )
-thisroot=selection
-
-print "add the path of the directory containing reference files"
+print "add the path of the directory containing reference files (i.e the directory should contain one fasta file per contig)"
 selection=raw_input()
 template=template.replace("{CNVnator_reference_dir_path}", "\'{}\'".format(selection) )
-
-print "add the cnvnator2VCF.pl script path, the path is set to cnvnator2VCF.pl if left blank"
-selection=raw_input()
-if selection == "":
-    selection = "cnvnator2VCF.pl"
-template=template.replace("{CNVnator2vcf_path}", "\'{}\'".format(selection) )
-
 
 print "setting up internal pipeline scripts"
 template=template.replace("{contig_sort_path}", "\'{}\'".format( os.path.join(programDirectory,"internal_scripts/contigSort.py") ) )
@@ -93,11 +63,6 @@ selection=raw_input()
 if selection == "":
     selection = "variant_effect_predictor.pl"
 template=template.replace("{VEP_path}", "\'{}\'".format(selection) )
-
-if install:
-    print "intalling SVDB"
-    template=template.replace("{SVDB_script_path}", "\'{}\'".format( os.path.join(programDirectory,"SVDB/SVDB.py") ) )
-    os.system("git clone https://github.com/J35P312/SVDB.git")
 
 print "add the path of an SVDB exported database file/sv vcf database(or leave blank to skip the frequency db)"
 selection=raw_input()
@@ -133,32 +98,22 @@ f.write(template)
 f.close()
 
 print "creating FindSV environment script"
-print "modules: print uppmax if you are using uppmax, print a line of each module to use, or leave empty to skip modules"
-print "example: bioinfo-tools samtools CNVnator vep, to load the modules bioinfo-tools, samtools, CNVnator and vep"
+print "modules: print uppmax if you are using uppmax. Otherwise, print a line of each module to use, or leave empty to skip modules"
+print "example: bioinfo-tools vep, to load the modules bioinfo-tools and vep"
 selection=raw_input()
 if selection == "UPPMAX" or selection ==  "uppmax":
-    selection = "bioinfo-tools CNVnator samtools vep bwa manta vcftools"
+    selection = "bioinfo-tools vep bwa manta vcftools Nextflow"
 
-print "creating conda environment"
-FindSV_env="source activate FindSV_env\n"
-if install:
-    command="{} {} {}".format(os.path.join(programDirectory,"internal_scripts/CONDA/create_conda_env.sh"), os.path.join(programDirectory,"internal_scripts/CONDA/"), programDirectory)
-    os.system(command)
-else:
-    print "remember to install the FindSV conda environment:"
-    print "{} {} {}".format(os.path.join(programDirectory,"internal_scripts/CONDA/create_conda_env.sh"), os.path.join(programDirectory,"internal_scripts/CONDA/"), programDirectory)
-
+FindSV_env=""
 if selection != "":
     FindSV_env += "module load {}\n".format(selection)
-if thisroot != "":
-    FindSV_env += "source {}".format(thisroot)
 
+FindSV_env+="\nexport NXF_LAUNCHER={}/nextflow_tmp".format(programDirectory)
+FindSV_env+="\nexport NXF_TEMP={}/nextflow_tmp".format(programDirectory)
+
+os.system("mkdir -p {}/nextflow_tmp".format(programDirectory))
 f= open("FindSV_env.sh", "w")
 f.write(FindSV_env)
 f.close()
-if install:
-    print "installing nextflow"
-    os.system("curl -fsSL get.nextflow.io | bash")
-else:
-    "skipped installing nexflow"
+
 os.system("chmod +x FindSV_env.sh")

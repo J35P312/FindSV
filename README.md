@@ -13,46 +13,53 @@ Run
         
     To analyse one bam file and put the output in the output_folder type:
 
-        python FindSV.py --bam file.bam --output output_folder --config config_file
+        singularity exec FindSV.simg python FindSV.py --bam file.bam --output output_folder --config config_file
 
     To analyse a folder containing bam files type:
 
-        python FindSV.py --folder input_folder --output output_folder --config config_file
+        singularity exec FindSV.simg python FindSV.py --folder input_folder --output output_folder --config config_file
 
 Optionally, the pipeline may be run using the FindSV_core.nf script directly:
 	
 	The following command will analyse a bam file:
-		./nextflow FindSV_core.nf --bam file.bam --working_dir output -c config.conf
+		singularity exec FindSV.simg nextflow FindSV_core.nf --bam file.bam --working_dir output -c config.conf
 	An entire folder containing bam files could be analysed using this command
-		./nextflow FindSV_core.nf --folder /the/bams/are/in/this/folder/ --working_dir output -c config.conf
+	    singularity exec FindSV.simg nextflow FindSV_core.nf --folder /the/bams/are/in/this/folder/ --working_dir output -c config.conf
 	
 		
 Installation
 ============
 Dependencies:
-    Conda
-    cnvnator
+
     Manta*
     variant effect predictor
-    bwa
-   
-After installing the dependencies, run the setup script:
+    Singularity
+    nextflow
+
+*manta is optional, and will only be e run if activated
+
+Install the dependencies, then download FindSV. 
+
+    git clone https://github.com/J35P312/FindSV.git
+
+
+next, you download the singularity image:
+
+    cd FindSV
+    singularity pull --name FindSV.simg shub://J35P312/FindSVSingularity
+
+The image file  must  be stored in the FindSV folder!
+
+lastly run the setup script:
+
     ./setup.sh
-*Manta is optional, and will not be run per default. To enable manta, edit the config file so that the RunManta variable is not set to FALSE.
- 
-this script will ask a couple on questions, such as cnvnator path and reference directory path. answer all these questions to finnish the setup.
-The cnvnator install scripts in the internal_scripts folder may be used to intall cnvnator.
 
-The setup script will atempt to connect the internet to install a couple of softwares (SVDB, TIDDIT), as well as the conda environment(found in the internal_scripts folder). If you do not have internet access, you may run
+remember to download the vep cache files!
+If you are using a server without internet connection, you will first have to download FindSV and pull the singularity image. 
+Next you transfer these files to the server, and then you run the setup script.
 
-./setup.sh noinstall
-
-This setting will allow you to skip those install steps. You still need to install these tools manually.
-
-Nexflow:
-
-Nextflow is installed through the setup.sh script. and FindSV assumes that nextflow is installed into the FindSV folder.
-If nextflow cannot be installed using the setup.sh script (e.g no internet access), you will need to change the nextflow path in the launch_core_*.sh scripts.
+Manta is turned of by default. To activate Manta, enter the config file, and set the  RunManta variable to anything except "FALSE". 
+If you activate manta, you may have to increase the time limit. Most 30X bam files should be complete within 2 days of run time.
 
 Restart module
 ============
