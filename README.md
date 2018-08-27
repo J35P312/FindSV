@@ -13,18 +13,18 @@ Run
         
     To analyse one bam file and put the output in the output_folder type:
 
-        singularity exec FindSV.simg python FindSV.py --bam file.bam --output output_folder --config config_file
+        python FindSV.py --bam file.bam --output output_folder --config config_file
 
     To analyse a folder containing bam files type:
 
-        singularity exec FindSV.simg python FindSV.py --folder input_folder --output output_folder --config config_file
+        python FindSV.py --folder input_folder --output output_folder --config config_file
 
 Optionally, the pipeline may be run using the FindSV_core.nf script directly:
 	
 	The following command will analyse a bam file:
-		singularity exec FindSV.simg nextflow FindSV_core.nf --bam file.bam --working_dir output -c config.conf
+		nextflow FindSV_core.nf --bam file.bam --working_dir output -c config.conf
 	An entire folder containing bam files could be analysed using this command
-	    singularity exec FindSV.simg nextflow FindSV_core.nf --folder /the/bams/are/in/this/folder/ --working_dir output -c config.conf
+		nextflow FindSV_core.nf --folder /the/bams/are/in/this/folder/ --working_dir output -c config.conf
 	
 		
 Installation
@@ -35,6 +35,8 @@ Dependencies:
     variant effect predictor
     Singularity
     nextflow
+    
+    python2.7 yaml module
 
 *manta is optional, and will only be e run if activated
 
