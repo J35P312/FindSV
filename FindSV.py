@@ -37,8 +37,8 @@ def retrieve_status(status,trace,working_dir):
         tmp_dict[prefix][task]["status"]=content[-2]
             
     for sample in tmp_dict:
-        if "Manta" in tmp_dict[sample]:
-            if  not tmp_dict[sample]["Manta"]["status"] == "COMPLETED":
+        if "Assemblatron" in tmp_dict[sample]:
+            if  not tmp_dict[sample]["Assemblatron"]["status"] == "COMPLETED":
                 tmp_dict[sample]["status"] = "FAILED:CALLING"
 			
         if "TIDDIT" in tmp_dict[sample]:

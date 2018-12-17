@@ -31,13 +31,6 @@ print "enter the standard output directory"
 selection=raw_input()
 template=template.replace("{working_dir}", "\'{}\'".format(selection) )
 
-print "Setting up manta"
-print "Set the manta configManta path, the path is set to configManta.py if left blank"
-selection=raw_input()
-if selection == "":
-    selection = "configManta.py"
-template=template.replace("{configManta}", "\'{}\'".format(selection) )
-
 print "Set the path to the reference genome(needs to be indexed using bwa and samtools 0.19)"
 selection=raw_input()
 template=template.replace("{genome}", "\'{}\'".format(selection) )
@@ -69,19 +62,6 @@ selection=raw_input()
 if selection == "":
     selection = "\"\""
 template=template.replace("{SVDB_path}", "\'{}\'".format(selection) )
-
-print "add the path of vcf database file containing known pathogenic variants(or press enter to continue)"
-selection=raw_input()
-if selection == "":
-    selection = "\"\""
-template=template.replace("{pathogenic_db_path}", "\'{}\'".format(selection) )
-
-
-print "add the path of vcf database file containing known benign variants(or press enter to continue)"
-selection=raw_input()
-if selection == "":
-    selection = "\"\""
-template=template.replace("{benign_db_path}", "\'{}\'".format(selection) )
 
 print "add the genmod ini file path, if left blank, the default genmod_SV.txt file will be used"
 selection=raw_input()

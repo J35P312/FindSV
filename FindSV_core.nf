@@ -10,12 +10,6 @@ if(params.folder){
         line -> 
         ["${file(line).baseName}",file(line)]
 	}
-
-    bai_files=Channel.fromPath("${params.folder}/*.bai").map{
-        line ->
-        println "${file(line).baseName}"
-        [ "${file(line).baseName}" , file(line) ]
-    }
     
 }else if(params.bam){
     //first get the bam files, and check if all files exists   
@@ -28,39 +22,11 @@ if(params.folder){
         ["${file(line).baseName}", file(line) ]
 	}	
     
-
-    //search for bai index, try both .bam.bai and .bai, stop if none is found
-    bai_files=Channel.from(params.bam.splitCsv()).map{
-        line ->
-        if(file(line+".bai").exists() ){
-            [ "${file(line).baseName}",file(line+".bai") ]   
-        }else if(file(line.replaceFirst(/.bam/,".bai")).exists() ){
-            [ "${file(line).baseName}", file(line.replaceFirst(/.bam/,".bai")) ]
-        }else{
-            println "Missing bai:${line}, each bam must be indexed"
-            exit 1
-        }
-    }
     if (params.vcf){
         vcf_files=Channel.from(params.bam.splitCsv()).map{
             line ->
-            if(file(line.replaceFirst(/.bam/,".bam.bai")).exists() ){
-                bai = file(line.replaceFirst(/.bam/,".bam.bai"))
-                [ file(line), file(line.replaceFirst(/.bam/,".bam.bai")) , file("${params.vcf}/${file(line).baseName}_CombinedCalls.vcf") ]   
-            }else if(file(line.replaceFirst(/.bam/,".bai")).exists() ){
-                [ file(line), file(line.replaceFirst(/.bam/,".bai")) , file("${params.vcf}/${file(line).baseName}_CombinedCalls.vcf") ]
-            }
-        } 
-        
-        Channel.from(params.bam.splitCsv()).map{
-            line ->
-            if(file(line.replaceFirst(/.bam/,".bam.bai")).exists() ){
-                bai = file(line.replaceFirst(/.bam/,".bam.bai"))
-                [ file(line), file(line.replaceFirst(/.bam/,".bam.bai")) , file("${params.vcf}/${file(line).baseName}_CombinedCalls.vcf") ]   
-            }else if(file(line.replaceFirst(/.bam/,".bai")).exists() ){
-                [ file(line), file(line.replaceFirst(/.bam/,".bai")) , file("${params.vcf}/${file(line).baseName}_CombinedCalls.vcf") ]
-            }
-        }.subscribe{println it}   
+            [ file(line), file("${params.vcf}/${file(line).baseName}_CombinedCalls.vcf") ]   
+        }
     }
         
            
@@ -74,15 +40,13 @@ if(params.folder){
     exit 1
 }
 
-sample_data = bam_files.cross(bai_files).map{
-      it ->  [it[0][0],it[0][1],it[1][1]] }
-
 contig_sort_exec_file = file("${params.contig_sort_path}")
 if(!contig_sort_exec_file.exists()) exit 1, "Error: Missing contig sort executable, set the contig sort parameter in the config file"
 
 SVDB_file = file("${params.SVDB_path}")
-pathogenic_db_file=file("${params.pathogenic_db_path}")
-benign_db_file=file("${params.benign_db_path}")
+SVDB_file2 = file("${params.SVDB_path2}")
+SVDB_file3 = file("${params.SVDB_path3}")
+
 
 genmod_rank_model_file = params.genmod_rank_model_path
 
@@ -100,40 +64,44 @@ frequency_filter_exec= file("${params.frequency_filter_path}")
 
 TIDDIT_bam=Channel.create()
 CNVnator_bam=Channel.create()
-manta_bam=Channel.create()
+assemblatron_bam=Channel.create()
 annotation_bam=Channel.create()
 combined_bam=Channel.create()
 
 Channel
-       	.from sample_data
-        .separate( TIDDIT_bam,annotation_bam,combined_bam, CNVnator_bam,manta_bam) { a -> [a, a, a, a,a] }
+       	.from bam_files
+        .separate( TIDDIT_bam,annotation_bam,combined_bam, CNVnator_bam,assemblatron_bam) { a -> [a, a, a, a,a] }
         
 //perform variant calling if the input is a bam fle
 if(!params.vcf){
-    if ("${params.RunManta}" != "FALSE"){
-        //Then assemble the variants
-        process Manta {
-            publishDir "${params.working_dir}", mode: 'copy', overwrite: true
-            errorStrategy 'ignore'      
-            tag { bam_file }
-            scratch true
-            cpus 2
+
+    process Assemblatron {
+        publishDir "${params.working_dir}", mode: 'copy', overwrite: true
+        errorStrategy 'ignore'      
+        tag { bam_file }
+        scratch true
+        cpus 16
     
-            input:
-            set ID,  file(bam_file), file(bai_file) from manta_bam
+        input:
+        set ID,  file(bam_file) from assemblatron_bam
     
-            output:
-            set ID, "${bam_file.baseName}.diploidSV.vcf"  into manta_output
+        output:
+        set ID, "${bam_file.baseName}.assemblatron_sv.vcf", "${bam_file.baseName}.assemblatron_snv.vcf" , "${bam_file.baseName}.assemblatron.bam"  into assemblatron_output
     
-            script:
-            """
-            ${params.configManta} --normalBam ${bam_file} --reference ${params.genome} --runDir MANTA_DIR
-            python MANTA_DIR/runWorkflow.py -m local -j 2
-            gunzip -c MANTA_DIR/results/variants/diploidSV.vcf.gz  > ${bam_file.baseName}.diploidSV.vcf
-            sed -ie 's/DUP:TANDEM/TDUP/g' ${bam_file.baseName}.diploidSV.vcf
-            """
-        }   
-    }
+        script:
+        """
+        mkdir temp
+        singularity exec ${params.FindSV_home}/Assemblatron.simg python /bin/assemblatron.py --fastq --bam ${bam_file} > input.fastq
+        singularity exec ${params.FindSV_home}/Assemblatron.simg python /bin/assemblatron.py --assemble --cores 16 --fastq input.fastq --prefix ${bam_file.baseName} --tmp temp
+        rm input.fastq
+
+        singularity exec ${params.FindSV_home}/Assemblatron.simg python /bin/assemblatron.py --align --cores 16 --ref ${params.genome} --prefix ${bam_file.baseName}.assemblatron  --contigs ${bam_file.baseName}.mag
+        singularity exec ${params.FindSV_home}/Assemblatron.simg python /bin/assemblatron.py --sv --bam ${bam_file.baseName}.assemblatron.bam --max_size 10000 > ${bam_file.baseName}.assemblatron_sv.vcf
+        singularity exec ${params.FindSV_home}/Assemblatron.simg python /bin/assemblatron.py --snv --bam ${bam_file.baseName}.assemblatron.bam --ref ${params.genome} > ${bam_file.baseName}.assemblatron_snv.vcf.pre
+        singularity exec ${params.FindSV_home}/FindSV.simg vt normalize ${bam_file.baseName}.assemblatron_snv.vcf.pre -r ${params.genome} | singularity exec ${params.FindSV_home}/FindSV.simg vt decompose - > ${bam_file.baseName}.assemblatron_snv.vcf.decomposed
+        ${VEP_exec_file} -i ${bam_file.baseName}.assemblatron_snv.vcf.decomposed -o ${bam_file.baseName}.assemblatron_snv.vcf --fork 16 --fasta ${params.genome} ${params.vep_snv_args}
+        """
+    }   
 
     process TIDDIT {
         publishDir "${params.working_dir}", mode: 'copy', overwrite: true
@@ -144,15 +112,14 @@ if(!params.vcf){
         cpus 1
         
         input:
-        set ID,  file(bam_file), file(bai_file) from TIDDIT_bam
+        set ID,  file(bam_file) from TIDDIT_bam
     
         output:
-        set ID, "${bam_file.baseName}.vcf" into TIDDIT_output
+        set ID, "${bam_file.baseName}.vcf","${bam_file.baseName}.tab","${bam_file.baseName}.ploidy.tab" into TIDDIT_output
     
         script:
         """
-        singularity exec ${params.FindSV_home}/FindSV.simg python /opt/TIDDIT/TIDDIT.py --sv --bam ${bam_file} -p ${params.TIDDIT_pairs} -q ${params.TIDDIT_q} -o ${bam_file.baseName} --ref ${params.genome}
-        rm *.tab
+        singularity exec ${params.FindSV_home}/FindSV.simg python /opt/TIDDIT/TIDDIT.py --sv --bam ${bam_file} -p ${params.TIDDIT_pairs} -r ${params.TIDDIT_reads} -q ${params.TIDDIT_q} -o ${bam_file.baseName} --ref ${params.genome}
         """
     }
 
@@ -165,7 +132,7 @@ if(!params.vcf){
         cpus 1
 
         input:
-        set ID,  file(bam_file), file(bai_file) from CNVnator_bam
+        set ID,  file(bam_file) from CNVnator_bam
     
         output: 
         set ID, "${bam_file.baseName}_CNVnator.vcf" into CNVnator_output
@@ -185,24 +152,16 @@ if(!params.vcf){
     
 
 
-    if ("${params.RunManta}" != "FALSE"){
+    combined_TIDDIT_CNVnator = TIDDIT_output.cross(CNVnator_output).map{
+        it ->  [it[0][0],it[0][1],it[1][1]]
+    }
 
-        combined_TIDDIT_CNVnator = TIDDIT_output.cross(CNVnator_output).map{
-            it ->  [it[0][0],it[0][1],it[1][1]]
-        }
-
-        combined_data = combined_TIDDIT_CNVnator.cross(manta_output).map{
-            it ->  [it[0][0],it[0][1],it[0][2],it[1][1]]
-        }
-    }else{
-        combined_data = TIDDIT_output.cross(CNVnator_output).map{
-            it ->  [it[0][0],it[0][1],it[1][1],file(params.genome)]
-        }
-
-    }    
+    combined_data = combined_TIDDIT_CNVnator.cross(assemblatron_output).map{
+        it ->  [it[0][0],it[0][1],it[0][2],it[1][1]]
+    }
 
     combined_bam = combined_data.cross(combined_bam).map{
-        it ->  [it[0][0],it[1][1],it[1][2],it[0][1],it[0][2],it[0][3] ]
+        it ->  [it[0][0],it[1][1],it[0][1],it[0][2],it[0][3] ]
     }
 
     process combine {
@@ -212,36 +171,18 @@ if(!params.vcf){
         cpus 1
 
         input:
-        set ID,file(bam_file), file(bai_file), file(TIDDIT_vcf), file(CNVnator_vcf), file(manta_vcf) from combined_bam
+        set ID,file(bam_file), file(TIDDIT_vcf), file(CNVnator_vcf), file(assemblatron_vcf) from combined_bam
 
         output: 
-        set ID, file("${bam_file.baseName}_CombinedCalls.vcf") into combined_FindSV
+        set file(bam_file), file("${bam_file.baseName}_CombinedCalls.vcf") into vcf_files	    
 	    
-	    
-	    script:
-
-        if ("${params.RunManta}" != "FALSE"){
-            """
-            singularity exec ${params.FindSV_home}/FindSV.simg svdb --merge --no_var --no_intra --same_order --overlap 0.7 --bnd_distance 2500 --vcf ${TIDDIT_vcf} ${manta_vcf} > PE_signals.vcf
-            singularity exec ${params.FindSV_home}/FindSV.simg svdb --merge --pass_only --no_intra --same_order --overlap 0.7 --bnd_distance 2500 --vcf PE_signals.vcf ${CNVnator_vcf} > merged.unsorted.vcf
-            singularity exec ${params.FindSV_home}/FindSV.simg python ${contig_sort_exec_file} --vcf merged.unsorted.vcf --bam ${bam_file} > ${bam_file.baseName}_CombinedCalls.vcf
-            rm merged.unsorted.vcf
-            """
-        }else{
-            """
-            singularity exec ${params.FindSV_home}/FindSV.simg svdb --merge --pass_only --same_order --no_intra --overlap 0.7 --bnd_distance 2500 --vcf ${TIDDIT_vcf} ${CNVnator_vcf} > merged.unsorted.vcf
-            singularity exec ${params.FindSV_home}/FindSV.simg python ${contig_sort_exec_file} --vcf merged.unsorted.vcf --bam ${bam_file} > ${bam_file.baseName}_CombinedCalls.vcf
-            rm merged.unsorted.vcf
-            """
-        }
-
-
-    }
-
-    vcf_files=annotation_bam.cross(combined_FindSV).map{
-        it ->  [it[0][1],it[0][2],it[1][1]]
-    }
-    
+	script:
+        """
+        singularity exec ${params.FindSV_home}/FindSV.simg svdb --merge --pass_only --same_order --no_intra --overlap 0.7 --bnd_distance 2500 --vcf ${TIDDIT_vcf} ${assemblatron_vcf} ${CNVnator_vcf} > merged.unsorted.vcf
+        singularity exec ${params.FindSV_home}/FindSV.simg python ${contig_sort_exec_file} --vcf merged.unsorted.vcf --bam ${bam_file} > ${bam_file.baseName}_CombinedCalls.vcf
+        rm merged.unsorted.vcf
+        """
+    }    
 }
 
 process annotate{
@@ -252,7 +193,7 @@ process annotate{
     cpus 1
     
     input:
-    set file(bam_file), file(bai_file), file(vcf_file) from vcf_files
+    set file(bam_file), file(vcf_file) from vcf_files
 
     output:
         file "${bam_file.baseName}_FindSV.vcf" into final_FindSV_vcf
@@ -286,9 +227,15 @@ process annotate{
         mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
 
-    if [ "" != ${params.pathogenic_db_path} ]
-    then 
-        singularity exec ${params.FindSV_home}/FindSV.simg svdb --query --overlap ${params.pathogenic_db_overlap} --bnd_distance ${params.pathogenic_db_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --db ${pathogenic_db_file} --hit_tag PATHOGENIC > ${vcf_file}.tmp
+    if [ "" != ${params.SVDB_path2} ]
+    then
+        singularity exec ${params.FindSV_home}/FindSV.simg svdb --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --frequency_tag FRQ2 --hit_tag OCC2 --db ${SVDB_file2} > ${vcf_file}.tmp
+        mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
+    fi
+
+    if [ "" != ${params.SVDB_path3} ]
+    then
+        singularity exec ${params.FindSV_home}/FindSV.simg svdb --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --frequency_tag FRQ3 --hit_tag OCC3 --db ${SVDB_file3} > ${vcf_file}.tmp
         mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
 
@@ -301,13 +248,6 @@ process annotate{
 	
     singularity exec ${params.FindSV_home}/FindSV.simg python ${frequency_filter_exec} ${bam_file.baseName}_FindSV.vcf ${params.SVDB_limit} > ${vcf_file}.tmp
     mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
-
-    if [ "" != ${params.benign_db_path} ]
-    then 
-        singularity exec ${params.FindSV_home}/FindSV.simg svdb --query --overlap ${params.benign_db_overlap} --bnd_distance ${params.benign_db_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --db ${benign_db_file} --hit_tag BENIGN > ${vcf_file}.tmp
-        grep -v ";BENIGN=1" ${vcf_file}.tmp > ${bam_file.baseName}_FindSV.vcf
-        rm ${vcf_file}.tmp
-    fi
 
     """
 

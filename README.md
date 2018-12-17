@@ -1,7 +1,8 @@
 FindSV
 ===========
-FindSV is a structural variation pipeline written in nextflow and python. FindSV performs variant calling using TIDDIT and CNVnator, and Manta.
-similar variants are merged, and the variants are annotated using VEP, frequency database, genmod, and custom annotation using the annotator script.
+FindSV is a structural variation pipeline written in nextflow and python. FindSV performs variant calling using TIDDIT and CNVnator, and Assemblatron (a slighlty polished version of fermikit).
+similar variants are merged, and the variants are annotated using VEP, frequency database, genmod, and custom annotation using the annotator script. 
+FindSV outputs one unfilered vcf file per caller, a merged and unfiltered vcf file (_Combined.vcf), as well as an annotated and filtered vcf file "_FindSV.vcf". In addition, FindSV outputs a ploidy tab file, that describes the ploidy for each chromosome, a snv vcf (decomposed, normalised using vt, and annotated using vep), as well as a coverage tab file.
 
 FindSV needs to be setup using the setup.sh script, this script will generate a config file aswell as a bash script for setting up the environment.
 
@@ -26,31 +27,30 @@ Optionally, the pipeline may be run using the FindSV_core.nf script directly:
 	An entire folder containing bam files could be analysed using this command
 		nextflow FindSV_core.nf --folder /the/bams/are/in/this/folder/ --working_dir output -c config.conf
 	
-		
+A 30x human sample should be processed within 2 days. Runtime depends on the genome size, purity of the input data, as  well as the health of the cluster.
+
 Installation
 ============
 Dependencies:
 
-    Manta*
     variant effect predictor
     Singularity
     nextflow
     
     python2.7 yaml module
 
-*manta is optional, and will only be e run if activated
-
 Install the dependencies, then download FindSV. 
 
     git clone https://github.com/J35P312/FindSV.git
 
-
-next, you download the singularity image:
+next, you download the singularity images:
 
     cd FindSV
     singularity pull --name FindSV.simg shub://J35P312/FindSVSingularity
 
-The image file  must  be stored in the FindSV folder!
+    singularity pull --name Assemblatron.simg shub://J35P312/Assemblatron
+
+The images file  must  be stored in the FindSV folder!
 
 lastly run the setup script:
 
@@ -59,9 +59,6 @@ lastly run the setup script:
 remember to download the vep cache files!
 If you are using a server without internet connection, you will first have to download FindSV and pull the singularity image. 
 Next you transfer these files to the server, and then you run the setup script.
-
-Manta is turned of by default. To activate Manta, enter the config file, and set the  RunManta variable to anything except "FALSE". 
-If you activate manta, you may have to increase the time limit. Most 30X bam files should be complete within 2 days of run time.
 
 Restart module
 ============
@@ -90,6 +87,17 @@ The frequency database is a vcf file. These vcf files are either multisample vcf
 Additionally, the swegen SVDB files may be used as a database:
 
 https://swefreq.nbis.se/
+
+FindSV supports a maximum of three SV databases, the path of these databases may be set through the following variables:
+
+SVDB_path={SVDB_path}
+SVDB_path2='""'
+SVDB_path3='""'
+
+SNVs
+====
+FindSV performs SNV calling using Assemblatron, which uses the same SNV caller as Fermikit. The SNVs are annotated using the vep_snv_args command listed in the config file.
+
 
 Genmod
 ========
