@@ -100,6 +100,8 @@ if(!params.vcf){
         singularity exec ${params.FindSV_home}/Assemblatron.simg python /bin/assemblatron.py --snv --bam ${bam_file.baseName}.assemblatron.bam --ref ${params.genome} > ${bam_file.baseName}.assemblatron_snv.vcf.pre
         singularity exec ${params.FindSV_home}/FindSV.simg vt normalize ${bam_file.baseName}.assemblatron_snv.vcf.pre -r ${params.genome} | singularity exec ${params.FindSV_home}/FindSV.simg vt decompose - > ${bam_file.baseName}.assemblatron_snv.vcf.decomposed
         ${VEP_exec_file} -i ${bam_file.baseName}.assemblatron_snv.vcf.decomposed -o ${bam_file.baseName}.assemblatron_snv.vcf --fork 16 --fasta ${params.genome} ${params.vep_snv_args}
+        ${VEP_exec_file} -i ${bam_file.baseName}.assemblatron_sv.vcf  -o ${bam_file.baseName}.assemblatron_sv.vcf.tmp ${params.vep_args}
+        mv ${bam_file.baseName}.assemblatron_sv.vcf.tmp ${bam_file.baseName}.assemblatron_sv.vcf
         """
     }   
 
@@ -129,7 +131,7 @@ if(!params.vcf){
         tag { bam_file }       
         scratch true
 
-        cpus 1
+        cpus 2
 
         input:
         set ID,  file(bam_file) from CNVnator_bam
@@ -156,12 +158,8 @@ if(!params.vcf){
         it ->  [it[0][0],it[0][1],it[1][1]]
     }
 
-    combined_data = combined_TIDDIT_CNVnator.cross(assemblatron_output).map{
-        it ->  [it[0][0],it[0][1],it[0][2],it[1][1]]
-    }
-
-    combined_bam = combined_data.cross(combined_bam).map{
-        it ->  [it[0][0],it[1][1],it[0][1],it[0][2],it[0][3] ]
+    combined_bam = combined_TIDDIT_CNVnator.cross(combined_bam).map{
+        it ->  [it[0][0],it[1][1],it[0][1],it[0][2] ]
     }
 
     process combine {
@@ -171,7 +169,7 @@ if(!params.vcf){
         cpus 1
 
         input:
-        set ID,file(bam_file), file(TIDDIT_vcf), file(CNVnator_vcf), file(assemblatron_vcf) from combined_bam
+        set ID,file(bam_file), file(TIDDIT_vcf), file(CNVnator_vcf) from combined_bam
 
         output: 
         set file(bam_file), file("${bam_file.baseName}_CombinedCalls.vcf") into vcf_files	    
