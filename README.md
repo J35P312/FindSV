@@ -1,8 +1,8 @@
 FindSV
 ===========
-FindSV is a structural variation pipeline written in nextflow and python. FindSV performs variant calling using TIDDIT and CNVnator, and Assemblatron (a slighlty polished version of fermikit).
+FindSV is a structural variation pipeline written in nextflow and python. FindSV performs variant calling using TIDDIT and CNVnator.
 similar variants are merged, and the variants are annotated using VEP, frequency database, genmod, and custom annotation using the annotator script. 
-FindSV outputs one unfilered vcf file per caller, a merged and unfiltered vcf file (_Combined.vcf), as well as an annotated and filtered vcf file "_FindSV.vcf". In addition, FindSV outputs a ploidy tab file, that describes the ploidy for each chromosome, a snv vcf (decomposed, normalised using vt, and annotated using vep), as well as a coverage tab file.
+FindSV outputs one unfilered vcf file per caller, a merged and unfiltered vcf file (_Combined.vcf), as well as an annotated and filtered vcf file "_FindSV.vcf". In addition, FindSV outputs a ploidy tab file, that describes the ploidy for each chromosome.
 
 FindSV needs to be setup using the setup.sh script, this script will generate a config file aswell as a bash script for setting up the environment.
 
@@ -47,8 +47,6 @@ next, you download the singularity images:
 
     cd FindSV
     singularity pull --name FindSV.simg shub://J35P312/FindSVSingularity
-
-    singularity pull --name Assemblatron.simg shub://J35P312/Assemblatron
 
 The images file  must  be stored in the FindSV folder!
 
