@@ -64,46 +64,15 @@ frequency_filter_exec= file("${params.frequency_filter_path}")
 
 TIDDIT_bam=Channel.create()
 CNVnator_bam=Channel.create()
-assemblatron_bam=Channel.create()
 annotation_bam=Channel.create()
 combined_bam=Channel.create()
 
 Channel
        	.from bam_files
-        .separate( TIDDIT_bam,annotation_bam,combined_bam, CNVnator_bam,assemblatron_bam) { a -> [a, a, a, a,a] }
+        .separate( TIDDIT_bam,annotation_bam,combined_bam, CNVnator_bam) { a -> [a, a, a, a] }
         
 //perform variant calling if the input is a bam fle
 if(!params.vcf){
-
-    process Assemblatron {
-        publishDir "${params.working_dir}", mode: 'copy', overwrite: true
-        errorStrategy 'ignore'      
-        tag { bam_file }
-        scratch true
-        cpus 16
-    
-        input:
-        set ID,  file(bam_file) from assemblatron_bam
-    
-        output:
-        set ID, "${bam_file.baseName}.assemblatron_sv.vcf", "${bam_file.baseName}.assemblatron_snv.vcf" , "${bam_file.baseName}.assemblatron.bam"  into assemblatron_output
-    
-        script:
-        """
-        mkdir temp
-        singularity exec ${params.FindSV_home}/Assemblatron.simg python /bin/assemblatron.py --fastq --bam ${bam_file} > input.fastq
-        singularity exec ${params.FindSV_home}/Assemblatron.simg python /bin/assemblatron.py --assemble --cores 16 --fastq input.fastq --prefix ${bam_file.baseName} --tmp temp
-        rm input.fastq
-
-        singularity exec ${params.FindSV_home}/Assemblatron.simg python /bin/assemblatron.py --align --cores 16 --ref ${params.genome} --prefix ${bam_file.baseName}.assemblatron  --contigs ${bam_file.baseName}.mag
-        singularity exec ${params.FindSV_home}/Assemblatron.simg python /bin/assemblatron.py --sv --bam ${bam_file.baseName}.assemblatron.bam --max_size 10000 > ${bam_file.baseName}.assemblatron_sv.vcf
-        singularity exec ${params.FindSV_home}/Assemblatron.simg python /bin/assemblatron.py --snv --bam ${bam_file.baseName}.assemblatron.bam --ref ${params.genome} > ${bam_file.baseName}.assemblatron_snv.vcf.pre
-        singularity exec ${params.FindSV_home}/FindSV.simg vt normalize ${bam_file.baseName}.assemblatron_snv.vcf.pre -r ${params.genome} | singularity exec ${params.FindSV_home}/FindSV.simg vt decompose - > ${bam_file.baseName}.assemblatron_snv.vcf.decomposed
-        ${VEP_exec_file} -i ${bam_file.baseName}.assemblatron_snv.vcf.decomposed -o ${bam_file.baseName}.assemblatron_snv.vcf --fork 16 --fasta ${params.genome} ${params.vep_snv_args}
-        ${VEP_exec_file} -i ${bam_file.baseName}.assemblatron_sv.vcf  -o ${bam_file.baseName}.assemblatron_sv.vcf.tmp ${params.vep_args}
-        mv ${bam_file.baseName}.assemblatron_sv.vcf.tmp ${bam_file.baseName}.assemblatron_sv.vcf
-        """
-    }   
 
     process TIDDIT {
         publishDir "${params.working_dir}", mode: 'copy', overwrite: true
@@ -172,15 +141,19 @@ if(!params.vcf){
         set ID,file(bam_file), file(TIDDIT_vcf), file(CNVnator_vcf) from combined_bam
 
         output: 
-        set file(bam_file), file("${bam_file.baseName}_CombinedCalls.vcf") into vcf_files	    
+        set ID, file("${bam_file.baseName}_CombinedCalls.vcf") into combined_FindSV	    
 	    
 	script:
         """
-        singularity exec ${params.FindSV_home}/FindSV.simg svdb --merge --pass_only --same_order --no_intra --overlap 0.7 --bnd_distance 2500 --vcf ${TIDDIT_vcf} ${assemblatron_vcf} ${CNVnator_vcf} > merged.unsorted.vcf
+        singularity exec ${params.FindSV_home}/FindSV.simg svdb --merge --pass_only --same_order --no_intra --overlap 0.7 --bnd_distance 2500 --vcf ${TIDDIT_vcf} ${CNVnator_vcf} > merged.unsorted.vcf
         singularity exec ${params.FindSV_home}/FindSV.simg python ${contig_sort_exec_file} --vcf merged.unsorted.vcf --bam ${bam_file} > ${bam_file.baseName}_CombinedCalls.vcf
         rm merged.unsorted.vcf
         """
     }    
+
+
+    vcf_files=annotation_bam.cross(combined_FindSV).map{ it ->  [it[0][1],it[1][1]] }
+
 }
 
 process annotate{
