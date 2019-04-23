@@ -90,6 +90,7 @@ if(!params.vcf){
     
         script:
         """
+	singularity exec ${params.FindSV_home}/FindSV.simg samtools index ${bam_file}
         singularity exec ${params.FindSV_home}/FindSV.simg python /opt/TIDDIT/TIDDIT.py --sv --bam ${bam_file} -p ${params.TIDDIT_pairs} -r ${params.TIDDIT_reads} -q ${params.TIDDIT_q} -o ${bam_file.baseName} --ref ${params.genome}
         """
     }
