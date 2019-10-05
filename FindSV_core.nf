@@ -90,7 +90,6 @@ if(!params.vcf){
     
         script:
         """
-	singularity exec ${params.FindSV_home}/FindSV.simg samtools index ${bam_file}
         singularity exec ${params.FindSV_home}/FindSV.simg python /opt/TIDDIT/TIDDIT.py --sv --bam ${bam_file} -p ${params.TIDDIT_pairs} -r ${params.TIDDIT_reads} -q ${params.TIDDIT_q} -o ${bam_file.baseName} --ref ${params.genome}
         """
     }
@@ -201,13 +200,13 @@ process annotate{
 
     if [ "" != ${params.SVDB_path2} ]
     then
-        singularity exec ${params.FindSV_home}/FindSV.simg svdb --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --frequency_tag FRQ2 --hit_tag OCC2 --db ${SVDB_file2} > ${vcf_file}.tmp
+        singularity exec ${params.FindSV_home}/FindSV.simg svdb --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --out_frq FRQ2 --out_occ OCC2 --db ${SVDB_file2} > ${vcf_file}.tmp
         mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
 
     if [ "" != ${params.SVDB_path3} ]
     then
-        singularity exec ${params.FindSV_home}/FindSV.simg svdb --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --frequency_tag FRQ3 --hit_tag OCC3 --db ${SVDB_file3} > ${vcf_file}.tmp
+        singularity exec ${params.FindSV_home}/FindSV.simg svdb --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --out_frq FRQ3 --out_occ OCC3 --db ${SVDB_file3} > ${vcf_file}.tmp
         mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
 
