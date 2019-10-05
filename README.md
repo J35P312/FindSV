@@ -81,7 +81,7 @@ affected gene will be added to the variant using the OMIM.txt tab file. Addition
 
 Frequency database
 ==========
-The frequency database is a vcf file. These vcf files are either multisample vcf files, or they contain OCC or FRQ tags as generated via SVDB. These files may be produced using SVDB, or any SV caller that performs multi-sample calling.
+The frequency database is a vcf file. These info field of these vcf files contain frequency and allele counts. These files may be produced using SVDB, or any SV caller that performs multi-sample calling.
 Additionally, the swegen SVDB files may be used as a database:
 
 https://swefreq.nbis.se/
@@ -91,6 +91,20 @@ FindSV supports a maximum of three SV databases, the path of these databases may
 SVDB_path={SVDB_path}
 SVDB_path2='""'
 SVDB_path3='""'
+
+The allele count and frequency are set using the  following parameters.
+
+    SVDB_1_OCC="OCC"
+    SVDB_1_FRQ="FRQ"
+
+    SVDB_2_OCC="OCC"
+    SVDB_2_FRQ="FRQ"
+
+    SVDB_3_OCC="OCC"
+    SVDB_3_FRQ="FRQ"
+
+Were OCC is alle count (Occurences) and FRQ frequency. 
+Make sure  that these tags are  present in the info field of each variant in the database(s)!
 
 SNVs
 ====

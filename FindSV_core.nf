@@ -2,6 +2,7 @@
 
 params.folder = ""
 params.vcf=""
+params.bam=""
 
 if(params.folder){
     print "analysing all bam files in ${params.folder}\n"
@@ -32,7 +33,7 @@ if(params.folder){
            
 }else{
     print "usage: nextflow FindSV_core.nf [--folder/--bam] --working_dir output_directory -c config_file\n"
-    print "--bam STR,	analyse a bam file, the bam files is asumed to be indexed\nAnalyse multiple bam files by separating the path of each bam files by ,"
+    print "--bam STR,	analyse a bam file\nAnalyse multiple bam files by separating the path of each bam files by ,"
     print "--folder STR,	analyse all bam files in the given folder, the bam fils are assumed to be indexed\n"
     print "-c STR,	the config file generated using the setup.py script\n"
     print "--working_dir STR,	the output directory, here all the vcf files will end up\n"
@@ -194,22 +195,21 @@ process annotate{
     
     if [ "" != ${params.SVDB_path} ]
     then
-        singularity exec ${params.FindSV_home}/FindSV.simg svdb --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --db ${SVDB_file} > ${vcf_file}.tmp
+        singularity exec ${params.FindSV_home}/FindSV.simg svdb --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --in_occ ${params.SVDB_1_OCC} --in_frq ${params.SVDB_1_FRQ} --db ${SVDB_file} > ${vcf_file}.tmp
         mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
 
     if [ "" != ${params.SVDB_path2} ]
     then
-        singularity exec ${params.FindSV_home}/FindSV.simg svdb --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --out_frq FRQ2 --out_occ OCC2 --db ${SVDB_file2} > ${vcf_file}.tmp
+        singularity exec ${params.FindSV_home}/FindSV.simg svdb --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --in_occ ${params.SVDB_2_OCC} --in_frq ${params.SVDB_2_FRQ} --out_frq FRQ2 --out_occ OCC2 --db ${SVDB_file2} > ${vcf_file}.tmp
         mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
 
     if [ "" != ${params.SVDB_path3} ]
     then
-        singularity exec ${params.FindSV_home}/FindSV.simg svdb --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --out_frq FRQ3 --out_occ OCC3 --db ${SVDB_file3} > ${vcf_file}.tmp
+        singularity exec ${params.FindSV_home}/FindSV.simg svdb --query --overlap ${params.SVDB_overlap} --bnd_distance ${params.SVDB_distance} --query_vcf ${bam_file.baseName}_FindSV.vcf --in_occ ${params.SVDB_3_OCC} --in_frq ${params.SVDB_3_FRQ} --out_frq FRQ3 --out_occ OCC3 --db ${SVDB_file3} > ${vcf_file}.tmp
         mv ${vcf_file}.tmp ${bam_file.baseName}_FindSV.vcf
     fi
-
 
     if [ "" != ${genmod_rank_model_file} ]
     then
