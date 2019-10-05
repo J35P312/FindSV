@@ -86,7 +86,7 @@ if(!params.vcf){
         set ID,  file(bam_file) from TIDDIT_bam
     
         output:
-        set ID, "${bam_file.baseName}.vcf","${bam_file.baseName}.tab","${bam_file.baseName}.ploidy.tab" into TIDDIT_output
+        set ID, "${bam_file.baseName}.vcf","${bam_file.baseName}.wig","${bam_file.baseName}.ploidy.tab" into TIDDIT_output
     
         script:
         """
