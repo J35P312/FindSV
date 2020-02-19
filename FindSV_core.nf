@@ -81,7 +81,7 @@ if(!params.vcf){
         tag { bam_file }
         scratch true
     
-        cpus 1
+        cpus 2
         
         input:
         set ID,  file(bam_file) from TIDDIT_bam
@@ -101,7 +101,7 @@ if(!params.vcf){
         tag { bam_file }       
         scratch true
 
-        cpus 2
+        cpus 4
 
         input:
         set ID,  file(bam_file) from CNVnator_bam

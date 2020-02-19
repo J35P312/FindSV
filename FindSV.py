@@ -69,7 +69,7 @@ def worker(bam_files,args,status):
     path=os.path.dirname(sys.argv[0])
     if not path:
         path = "."
-    print "Processing, please do not turn off FindSV"
+    print ("Processing, please do not turn off FindSV")
 
     if os.path.isfile("{}/trace.txt".format(args.output)):
         os.remove("{}/trace.txt".format(args.output))
@@ -100,8 +100,8 @@ def print_yaml(status,working_dir):
         status[sample]["combined_caller_vcf"]=os.path.join(working_dir,sample+"_CombinedCalls.vcf")
         status[sample]["annotated_vcf"]=os.path.join(working_dir,sample+"_FindSV.vcf")
         if "FAILED" in status[sample]["status"]:
-            print sample
-            print status[sample]["status"]
+            print (sample)
+            print (status[sample]["status"])
 
     if not os.path.exists(working_dir):
         os.makedirs(working_dir)
@@ -112,7 +112,7 @@ def print_yaml(status,working_dir):
     f.close()
     os.remove("{}/lock".format(working_dir))
 
-    print "DONE"
+    print ("DONE")
 
 def check_lock(working_dir):
     if os.path.isfile(os.path.join(working_dir,"lock")):
@@ -160,7 +160,7 @@ if args.bam:
         status=worker([{"bam":args.bam,"mode":"full"}],args,status)
         print_yaml(status,args.output)
     else:
-        print "Error: the bam file is already analysed, either restart the analysis using restart, or use an other working directory"
+        print ("Error: the bam file is already analysed, either restart the analysis using restart, or use an other working directory")
         
 #analyse all bamfiles within a folder(recursive searching)
 elif args.folder:
@@ -193,7 +193,7 @@ elif args.folder:
         print_yaml(status,args.output)
         
     else:
-        print "error: no new bam files was found, use the restart module if you wish to restart any sample"
+        print ("error: no new bam files was found, use the restart module if you wish to restart any sample")
         
 #the restart module
 elif args.restart:
