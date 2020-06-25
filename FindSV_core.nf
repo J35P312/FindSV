@@ -14,17 +14,17 @@ if(params.folder){
     
 }else if(params.bam){
     //first get the bam files, and check if all files exists   
-    //bam_files= Channel.from( params.bam.splitCsv() )
-    Channel.from( params.bam.splitCsv()).subscribe{
+    //bam_files= Channel.from( params.bam.split(",") )
+    Channel.from( params.bam.split(",")).subscribe{
         if(!file(it).exists()) exit 1, "Missing bam:${it}, use either --bam to analyse a bam file, or --bam and--vcf to annotate a vcf file"
     }
-	bam_files=Channel.from(params.bam.splitCsv()).map{
+	bam_files=Channel.from(params.bam.split(",")).map{
         line ->
         ["${file(line).baseName}", file(line) ]
 	}	
     
     if (params.vcf){
-        vcf_files=Channel.from(params.bam.splitCsv()).map{
+        vcf_files=Channel.from(params.bam.split(",")).map{
             line ->
             [ file(line), file("${params.vcf}/${file(line).baseName}_CombinedCalls.vcf") ]   
         }
@@ -81,7 +81,7 @@ if(!params.vcf){
         tag { bam_file }
         scratch true
     
-        cpus 2
+        cpus 1
         
         input:
         set ID,  file(bam_file) from TIDDIT_bam
@@ -101,7 +101,7 @@ if(!params.vcf){
         tag { bam_file }       
         scratch true
 
-        cpus 4
+        cpus 1
 
         input:
         set ID,  file(bam_file) from CNVnator_bam

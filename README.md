@@ -37,7 +37,7 @@ Dependencies:
     Singularity
     nextflow
     
-    python2.7 yaml module
+    python yaml module
 
 Install the dependencies, then download FindSV. 
 
@@ -105,11 +105,6 @@ The allele count and frequency are set using the  following parameters.
 
 Were OCC is alle count (Occurences) and FRQ frequency. 
 Make sure  that these tags are  present in the info field of each variant in the database(s)!
-
-SNVs
-====
-FindSV performs SNV calling using Assemblatron, which uses the same SNV caller as Fermikit. The SNVs are annotated using the vep_snv_args command listed in the config file.
-
 
 Genmod
 ========
